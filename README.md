@@ -5,7 +5,7 @@ ClockIt is a full-stack web application for managing shift assignments, attendan
 ### Frontend
 Rahul Hejjodlu Umamahesha
 
-Varshith Reddy
+Varshith Reddy Onteddu
 ### Backend
 Avantika Holla Sathyanarayana
 
