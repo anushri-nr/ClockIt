@@ -9,7 +9,8 @@
 
 # Node modules and dependency files
 /node_modules/
-/package-lock.json
+# we need package-lock.json to ensure we all install exact versions of every library
+# /package-lock.json
 /yarn.lock
 
 # Environment files
@@ -54,5 +55,9 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# OS Junk
+.DS_Store
+Thumbs.db
