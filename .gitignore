@@ -9,7 +9,8 @@
 
 # Node modules and dependency files
 /node_modules/
-/package-lock.json
+# we need package-lock.json to ensure we all install exact versions of every library
+# /package-lock.json
 /yarn.lock
 
 # Environment files
@@ -26,3 +27,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# VSCode
+.vscode
+
+# OS Junk
+.DS_Store
+Thumbs.db
