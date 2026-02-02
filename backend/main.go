@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -12,11 +13,21 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/", rootHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", rootHandler)
 
-	addr := ":8080"
-	log.Printf("Starting server on %s\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+		// Set timeouts to avoid Slowloris attacks.
+		// Tune these values as needed.
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	log.Printf("Starting server on %s", srv.Addr)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed: %v", err)
 	}
 }
