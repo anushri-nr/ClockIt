@@ -21,9 +21,10 @@ func main() {
 		Handler: mux,
 		// Set timeouts to avoid Slowloris attacks.
 		// Tune these values as needed.
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	log.Printf("Starting server on %s", srv.Addr)
