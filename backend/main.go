@@ -1,6 +1,7 @@
 package main
 
 import (
+	"clockit/backend/database"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,6 +16,9 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
+
+	// Connect to the database using GORM
+	database.Init()
 
 	srv := &http.Server{
 		Addr:    ":8080",
