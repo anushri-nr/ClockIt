@@ -1,7 +1,10 @@
 package database
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -9,15 +12,27 @@ import (
 
 var DB *gorm.DB
 
-// Init opens an sqlite database at the default path database.db
-func Init() {
-	path := "database.db"
+func Init(path string) error {
+	if path == "" {
+		return fmt.Errorf("database.Init: empty database path")
+	}
+
+	// Ensure the directory for the database file exists
+	dir := filepath.Dir(path)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			log.Printf("database.Init: failed to create directory %q: %v", dir, err)
+			return err
+		}
+	}
 
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Printf("database.Init: failed to connect to sqlite database at %q: %v", path, err)
+		return err
 	}
 
 	DB = db
-	log.Println("Successfully connected to database")
+	log.Printf("database.Init: successfully connected to database at %q", path)
+	return nil
 }

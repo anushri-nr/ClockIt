@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -17,8 +18,17 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
 
+	// Determine database path from environment variable or use default
+	defaultPath := "database/database.db"
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = defaultPath
+	}
+
 	// Connect to the database using GORM
-	database.Init()
+	if err := database.Init(dbPath); err != nil {
+		log.Fatalf("failed to initialize database: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:    ":8080",
