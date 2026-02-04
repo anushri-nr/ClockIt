@@ -23,7 +23,7 @@ func main() {
 	// Determine database path from environment variable or use default
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Warning: could not load .env file: %v (continuing with defaults)", err)
 	}
 
 	dbPath := os.Getenv("DB_PATH")

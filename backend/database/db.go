@@ -14,7 +14,7 @@ var DB *gorm.DB
 
 func Init(path string) error {
 	if path == "" {
-		return fmt.Errorf("Empty database path")
+		return fmt.Errorf("empty database path")
 	}
 
 	// Ensure the directory for the database file exists
