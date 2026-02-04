@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,8 +21,14 @@ func main() {
 	mux.HandleFunc("/", rootHandler)
 
 	// Determine database path from environment variable or use default
-	defaultPath := "database/database.db"
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	dbPath := os.Getenv("DB_PATH")
+	defaultPath := "database/database.db"
+
 	if dbPath == "" {
 		dbPath = defaultPath
 	}

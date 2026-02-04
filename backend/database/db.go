@@ -14,25 +14,25 @@ var DB *gorm.DB
 
 func Init(path string) error {
 	if path == "" {
-		return fmt.Errorf("database.Init: empty database path")
+		return fmt.Errorf("Empty database path")
 	}
 
 	// Ensure the directory for the database file exists
 	dir := filepath.Dir(path)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Printf("database.Init: failed to create directory %q: %v", dir, err)
+			log.Printf("Failed to create directory %q: %v", dir, err)
 			return err
 		}
 	}
 
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
-		log.Printf("database.Init: failed to connect to sqlite database at %q: %v", path, err)
+		log.Printf("Failed to connect to sqlite database at %q: %v", path, err)
 		return err
 	}
 
 	DB = db
-	log.Printf("database.Init: successfully connected to database at %q", path)
+	log.Printf("Successfully connected to database at %q", path)
 	return nil
 }
