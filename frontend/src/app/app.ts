@@ -1,15 +1,14 @@
-import { Component} from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatButtonModule],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class AppComponent {
-  title = 'frontend';
+  title = 'ClockIt';
 }
 
-export { AppComponent as App};
+export { AppComponent as App };

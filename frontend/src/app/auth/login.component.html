@@ -1,0 +1,41 @@
+<section class="auth-shell">
+  <div class="auth-card">
+    <header>
+      <p class="eyebrow">ClockIt</p>
+      <h1>Welcome back</h1>
+      <!-- <p class="subhead">Sign in to manage shifts, attendance, and payouts.</p> -->
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <label class="field">
+        <span>Login as</span>
+        <select formControlName="role" aria-label="Select role">
+          <option value="Employee">Employee</option>
+          <option value="Manager">Manager</option>
+        </select>
+        <small class="hint"> Sign in as Manager / Employee.</small>
+      </label>
+
+      <label class="field">
+        <span>Employee ID</span>
+        <input type="text" formControlName="employeeId" placeholder="EMP-1024" />
+        <small *ngIf="form.get('employeeId')?.touched && form.get('employeeId')?.invalid">Required</small>
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input type="password" formControlName="password" placeholder="Minimum 6 characters" />
+        <small *ngIf="form.get('password')?.touched && form.get('password')?.invalid">
+          Minimum 6 characters
+        </small>
+      </label>
+
+      <button class="primary" type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </form>
+
+    <div class="message success" *ngIf="successMessage">{{ successMessage }}</div>
+    <div class="message error" *ngIf="errorMessage">{{ errorMessage }}</div>
+  </div>
+</section>
