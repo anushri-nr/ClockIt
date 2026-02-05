@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login.component';
+import { SupervisorDashboardComponent } from './supervisor-dashboard/supervisor-dashboard.component';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
-  { path: 'login', component: LoginComponent }
+  { path: '', component: SupervisorDashboardComponent },
+  { path: 'login', component: LoginComponent },
+  { path: 'supervisor', component: SupervisorDashboardComponent }
 ];
