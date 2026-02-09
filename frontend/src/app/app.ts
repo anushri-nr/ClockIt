@@ -1,11 +1,10 @@
-import { Component} from '@angular/core';
+import { Component, NgModule} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { LandingComponent } from './landing/landing';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatButtonModule, LandingComponent],
+  imports: [RouterOutlet, MatButtonModule],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
