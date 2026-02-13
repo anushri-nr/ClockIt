@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"clockit/backend/models"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,7 +31,7 @@ func SupervisorRegister(c *gin.Context) {
 
 	log.Printf("Registering supervisor %s (%s)", req.Name, req.Email)
 
-	employee, err := services.RegisterSupervisor(
+	employee, err := services.RegisterEmployee(
 		req.Name,
 		req.Email,
 		req.Password,
@@ -37,6 +39,7 @@ func SupervisorRegister(c *gin.Context) {
 		req.PhoneNo,
 		req.CompanyID,
 		req.Wage,
+		models.RoleSupervisor,
 	)
 	if err != nil {
 		log.Printf("Failed to register supervisor: %v", err)

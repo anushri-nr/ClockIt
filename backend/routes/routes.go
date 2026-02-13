@@ -8,9 +8,14 @@ import (
 
 func RegisterRoutes(r *gin.Engine) {
 
-	supervisorRoutes := r.Group("/api/supervisor")
+	supervisorRoutes := r.Group("/api/supervisors")
 	{
 		supervisorRoutes.POST("/register", controllers.SupervisorRegister)
 		supervisorRoutes.POST("workers/availability", controllers.GetWorkerAvailability)
+	}
+
+	workerRoutes := r.Group("/api/workers")
+	{
+		workerRoutes.POST("/register", controllers.WorkerRegister)
 	}
 }
