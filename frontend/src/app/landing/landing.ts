@@ -3,13 +3,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { Router, RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatRipple } from '@angular/material/core';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, RouterModule, MatIconModule, MatRipple, MatButtonToggleModule],
+  imports: [MatCardModule, MatButtonModule, RouterModule, MatIconModule, MatButtonToggleModule],
   template: `
   <div class="landing-container">
     
@@ -30,9 +29,7 @@ import {MatButtonToggleModule} from '@angular/material/button-toggle';
     </div>
 
   </div>
-`,
-// ... keep your imports and logic
-  styles: [/* ... styles ... */]
+`
 })
 export class LandingComponent {
   constructor(private router: Router) { }

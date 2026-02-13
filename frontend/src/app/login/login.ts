@@ -1,23 +1,33 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-login',
-    imports: [FormsModule],
+    imports: [FormsModule, CommonModule],
     template: `
-  <div>
+  <div style="padding: 20px; font-family: sans-serif; max-width: 400px; margin: 0 auto;">
   <h2>Login</h2>
-  <form (ngSubmit)="onSubmit()">
-    <label for="username">Username:</label>
-    <input type="text" id="username" [(ngModel)]="username" name="username" required>
+  <form #registerForm="ngForm" (ngSubmit)="registerForm.valid && onSubmit()">
+  <div>
+    <label for="email">Email:</label>
+          <input type="email" id="email" [(ngModel)]="email" name="email" required email style="width: 100%;">
+  </div>
 
+  <div>
     <label for="password">Password:</label>
-    <input type="password" id="password" [(ngModel)]="password" name="password" required>
-
-    <button type="submit">Login</button>
+          <input type="password" id="password" [(ngModel)]="password" name="password" required style="width: 100%;">
+    </div>
+    <button type="submit" 
+                [disabled]="!registerForm.valid"
+                style="padding: 10px; cursor: pointer; margin-top: 10px;"
+                [style.background-color]="registerForm.valid ? '#007bff' : 'grey'"
+                [style.color]="'white'">
+          Login
+        </button>
   </form>
-
+  <br><br>
   <div (click)=onRegister() class="register-button">
     <button matButton="outlined">Register</button>
   </div>
@@ -26,7 +36,7 @@ import { ActivatedRoute, Router } from '@angular/router';
   `
 })
 export class LoginComponent {
-    username: string = '';
+    email: string = '';
     password: string = '';
     currentRole: string = '';
 
@@ -42,10 +52,15 @@ export class LoginComponent {
 
 
     onSubmit() {
-        // Implement your login logic here
-        console.log('Username:', this.username);
+
+        console.log('Username:', this.email);
         console.log('Password:', this.password);
         console.log('Role:', this.currentRole);
-        // Add authentication logic and navigate to the next page upon successful login
+
+        if (this.currentRole.toLowerCase() === 'worker') {
+        this.router.navigate(['/worker-dashboard']);
+    } else {
+        alert("Supervisor Dashboard not built yet.");
+    }
     }
 }
