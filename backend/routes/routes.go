@@ -11,5 +11,6 @@ func RegisterRoutes(r *gin.Engine) {
 	supervisorRoutes := r.Group("/api/supervisor")
 	{
 		supervisorRoutes.POST("/register", controllers.SupervisorRegister)
+		supervisorRoutes.POST("workers/availability", controllers.GetWorkerAvailability)
 	}
 }

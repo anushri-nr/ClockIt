@@ -4,6 +4,7 @@ import (
 	"clockit/backend/services"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,4 +52,36 @@ func SupervisorRegister(c *gin.Context) {
 		"role":      employee.Role,
 		"companyID": employee.CompanyID,
 	})
+}
+
+// Request body for worker availability
+type AvailabilityRequest struct {
+	Date string `json:"date" binding:"required"`
+}
+
+// Returns all workers available on a specific date
+func GetWorkerAvailability(c *gin.Context) {
+	var req AvailabilityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("GetWorkerAvailability: invalid request: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request, date required"})
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		log.Printf("GetWorkerAvailability: invalid date format: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format, use YYYY-MM-DD"})
+		return
+	}
+
+	workers, err := services.GetWorkersAvailableForDate(date)
+	if err != nil {
+		log.Printf("GetWorkerAvailability: failed to fetch workers: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch availability"})
+		return
+	}
+
+	log.Printf("Found %d workers available", len(workers))
+	c.JSON(http.StatusOK, workers)
 }
