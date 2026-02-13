@@ -2,12 +2,13 @@ package main
 
 import (
 	"clockit/backend/database"
+	"clockit/backend/routes"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -17,9 +18,6 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", rootHandler)
-
 	// Determine database path from environment variable or use default
 	err := godotenv.Load()
 	if err != nil {
@@ -38,19 +36,12 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
-		// Set timeouts to avoid Slowloris attacks.
-		// Tune these values as needed.
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       120 * time.Second,
-	}
+	r := gin.Default()
+	routes.RegisterRoutes(r)
 
-	log.Printf("Starting server on %s", srv.Addr)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	log.Println("Starting ClockIt server on :8080")
+	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+
 }

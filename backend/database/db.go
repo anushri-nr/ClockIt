@@ -1,6 +1,7 @@
 package database
 
 import (
+	"clockit/backend/models"
 	"fmt"
 	"log"
 	"os"
@@ -34,5 +35,12 @@ func Init(path string) error {
 
 	DB = db
 	log.Printf("Successfully connected to database at %q", path)
+
+	// Auto-migrate models
+	if err := DB.AutoMigrate(
+		&models.Employee{},
+	); err != nil {
+		return fmt.Errorf("auto-migrate failed: %v", err)
+	}
 	return nil
 }

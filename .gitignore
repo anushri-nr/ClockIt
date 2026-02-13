@@ -61,3 +61,5 @@ go.work.sum
 # OS Junk
 .DS_Store
 Thumbs.db
+
+database.db
