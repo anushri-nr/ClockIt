@@ -2,11 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; 
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
+import { AuthService } from '../services/auth';
 
 @Component({
   selector: 'app-register',
@@ -117,7 +117,13 @@ export class RegisterComponent implements OnInit {
     role: 'Worker' 
   };
 
-  constructor(private router: Router, private route: ActivatedRoute) {}
+  isLoading = false;
+
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private authService: AuthService,
+  ) {}
 
   ngOnInit() {
     const roleFromUrl = this.route.snapshot.queryParams['role'];
@@ -127,13 +133,23 @@ export class RegisterComponent implements OnInit {
   }
 
   onSubmit() {
-    console.log('Sending to Backend:', this.user);
-    alert('Registration Successful!');
+    if(this.isLoading) return;
+    this.isLoading = true;
     
-    if (this.user.role.toLowerCase() === 'worker') {
-        this.router.navigate(['/worker-dashboard']);
-    } else {
-        alert("Supervisor Dashboard not built yet.");
-    }
+    this.authService.register(this.user)
+    .subscribe((success) => {
+      if(success) {
+        alert("Registration Succesful");
+        if(this.user.role.toLowerCase() == "worker") {
+          this.router.navigate(['worker-dashboard']);
+        }
+        else {
+          alert("Supervisor Dashboard not built yet");
+        }
+      }
+      else {
+        alert("Registration failed (Check the console)");
+      }
+    });
   }
 }

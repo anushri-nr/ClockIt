@@ -2,12 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-
-// MATERIAL IMPORTS
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
+import { AuthService } from '../services/auth';
 
 @Component({
   selector: 'app-login',
@@ -82,8 +81,13 @@ export class LoginComponent implements OnInit {
   email = '';
   password = '';
   currentRole = 'Worker';
+  isLoading = false;
 
-  constructor(private route: ActivatedRoute, private router: Router) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private authService: AuthService,
+    ) {}
 
   ngOnInit() {
     const roleFromUrl = this.route.snapshot.queryParams['role'];
@@ -97,12 +101,20 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit() {
-    console.log('Login Payload:', { email: this.email, role: this.currentRole });
+    if(this.isLoading) return;
+    this.isLoading = true;
     
-    if (this.currentRole.toLowerCase() === 'worker') {
-      this.router.navigate(['/worker-dashboard']);
-    } else {
-      alert("Supervisor Dashboard not built yet.");
-    }
+    this.authService.login(this.email, this.password, this.currentRole)
+    .subscribe((success) => {
+
+      this.isLoading = false;
+
+      if(success) {
+        this.router.navigate(['/worker-dashboard']);
+      }
+      else {
+        alert("Login failed!(Check the console)")
+      }
+    });
   }
 }
