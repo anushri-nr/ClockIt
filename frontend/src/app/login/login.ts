@@ -61,21 +61,41 @@ import { AuthService } from '../services/auth';
     </div>
   `,
   styles: [`
-    .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f5f5f5; padding: 20px; }
-    .login-card { width: 100%; max-width: 400px; padding: 20px; }
-    .full-width { width: 100%; margin-bottom: 5px; }
-    .actions { margin-top: 10px; }
-    
-    /* NEW CSS RULE FOR CENTERING */
-    .center-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      padding-top: 10px;
-    }
-  `]
+  .landing-container { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    /* No background color here, we let the global gradient shine through */
+  }
+
+  .landing-card { 
+    width: 400px; 
+    padding: 40px; /* More breathing room */
+    text-align: center; 
+    background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+    backdrop-filter: blur(10px); /* The "Frosted Glass" effect (Modern!) */
+  }
+
+  mat-card-title { 
+    font-size: 2.2rem; 
+    font-weight: 300; /* Thinner, more elegant font */
+    color: #333;
+    margin-bottom: 5px; 
+  }
+
+  mat-card-subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 30px; /* Push content down */
+  }
+
+  /* Make the icons in the buttons pop */
+  mat-icon { 
+    vertical-align: middle; 
+    margin-right: 5px;
+  }
+`]
 })
 export class LoginComponent implements OnInit {
   email = '';
@@ -110,7 +130,13 @@ export class LoginComponent implements OnInit {
       this.isLoading = false;
 
       if(success) {
-        this.router.navigate(['/worker-dashboard']);
+        alert("Login Succesful");
+        if(this.currentRole.toLowerCase() == "worker") {
+          this.router.navigate(['worker-dashboard']);
+        }
+        else {
+          alert("Supervisor Dashboard not built yet");
+        }
       }
       else {
         alert("Login failed!(Check the console)")

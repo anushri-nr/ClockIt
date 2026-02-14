@@ -34,7 +34,7 @@ interface Shift {
   template: `
     <div class="dashboard-container">
       
-      <mat-toolbar color="primary">
+      <mat-toolbar>
         <span>ClockIt: Worker Portal</span>
         <span class="spacer"></span>
         <button mat-icon-button>
@@ -58,12 +58,51 @@ interface Shift {
     </div>
   `,
   styles: [`
-    .dashboard-container { background-color: #f5f5f5; min-height: 100vh; }
-    .content { padding: 20px; max-width: 1200px; margin: 0 auto; }
-    .spacer { flex: 1 1 auto; }
-    .grid-card { padding: 20px; }
-    h1 { margin-bottom: 20px; color: #333; }
-  `]
+  /* 1. Reset the container to let the global gradient show through */
+  .dashboard-container { 
+    min-height: 100vh; 
+    /* No background-color here; we want the purple/blue global gradient */
+  }
+
+  /* 2. Style the Toolbar to look premium */
+  mat-toolbar {
+    background: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+    color: #333; /* Dark text for contrast */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Subtle shadow */
+    backdrop-filter: blur(5px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .spacer { flex: 1 1 auto; }
+
+  /* 3. The Content Area */
+  .content { 
+    padding: 40px; 
+    max-width: 1200px; 
+    margin: 0 auto; 
+  }
+
+  h1 { 
+    color: white; /* White text looks great on the purple gradient */
+    font-size: 2rem;
+    font-weight: 300;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Make text readable */
+  }
+
+  /* 4. The Grid Card - The "Glass Sheet" */
+  .grid-card { 
+    padding: 0; /* Remove padding so grid fills the card */
+    overflow: hidden; /* Round the corners of the grid */
+    
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  }
+`]
 })
 export class WorkerDashboardComponent {
   // Mock Data

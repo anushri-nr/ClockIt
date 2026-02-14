@@ -77,34 +77,47 @@ import { AuthService } from '../services/auth';
     </div>
   `,
   styles: [`
-    .register-container { 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      min-height: 100vh; 
-      background-color: #f5f5f5; 
-      padding: 20px; 
-    }
-    .register-card { 
-      width: 100%; 
-      max-width: 450px; 
-    }
-    .full-width { 
-      width: 100%; 
-      margin-bottom: 10px; 
-    }
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    mat-card-title {
-      margin-bottom: 20px;
-      display: block;
-      text-align: center;
-    }
-  `]
+  .register-container { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    /* The global gradient from styles.scss provides the background */
+    padding: 20px; 
+  }
+
+  .register-card { 
+    width: 100%; 
+    max-width: 500px; /* Slightly wider than login for better spacing */
+    padding: 30px;
+    
+    /* THE GLASS EFFECT */
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+
+  .full-width { 
+    width: 100%; 
+    margin-bottom: 5px; 
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* More breathing room between buttons */
+    margin-top: 20px;
+  }
+
+  mat-card-title {
+    font-size: 1.8rem;
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+`]
 })
 export class RegisterComponent implements OnInit {
   

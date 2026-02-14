@@ -43,12 +43,41 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: [`
-    .landing-container { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f5f5f5; }
-    .landing-card { width: 400px; padding: 30px; text-align: center; }
-    .content-center { display: flex; justify-content: center; margin-top: 20px; }
-    mat-card-title { font-size: 2rem; margin-bottom: 10px; }
-    mat-icon { margin-right: 8px; }
-  `]
+  .landing-container { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    /* No background color here, we let the global gradient shine through */
+  }
+
+  .landing-card { 
+    width: 400px; 
+    padding: 40px; /* More breathing room */
+    text-align: center; 
+    background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+    backdrop-filter: blur(10px); /* The "Frosted Glass" effect (Modern!) */
+  }
+
+  mat-card-title { 
+    font-size: 2.2rem; 
+    font-weight: 300; /* Thinner, more elegant font */
+    color: #333;
+    margin-bottom: 5px; 
+  }
+
+  mat-card-subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 30px; /* Push content down */
+  }
+
+  /* Make the icons in the buttons pop */
+  mat-icon { 
+    vertical-align: middle; 
+    margin-right: 5px;
+  }
+`]
 })
 export class LandingComponent {
   constructor(private router: Router) { }
