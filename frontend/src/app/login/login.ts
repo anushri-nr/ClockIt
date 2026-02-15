@@ -158,7 +158,7 @@ export class LoginComponent implements OnInit {
         if(this.currentRole.toLowerCase() == "worker") {
           this.router.navigate(['worker-dashboard']);
         } else {
-          alert("Supervisor Dashboard not built yet");
+          this.router.navigate(['supervisor-dashboard']);
         }
       } else {
         alert("Login failed!(Check the console)")
