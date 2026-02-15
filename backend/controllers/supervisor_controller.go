@@ -58,20 +58,22 @@ func SupervisorRegister(c *gin.Context) {
 }
 
 // Request body for worker availability
-type AvailabilityRequest struct {
-	Date string `json:"date" binding:"required"`
+type AvailabilityQuery struct {
+	Date string `form:"date" binding:"required"`
 }
 
 // Returns all workers available on a specific date
 func GetWorkerAvailability(c *gin.Context) {
-	var req AvailabilityRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("GetWorkerAvailability: invalid request: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request, date required"})
+	var query AvailabilityQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		log.Printf("GetWorkerAvailability: invalid query: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "date query parameter is required (YYYY-MM-DD)",
+		})
 		return
 	}
 
-	date, err := time.Parse("2006-01-02", req.Date)
+	date, err := time.Parse("2006-01-02", query.Date)
 	if err != nil {
 		log.Printf("GetWorkerAvailability: invalid date format: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format, use YYYY-MM-DD"})
