@@ -18,7 +18,7 @@ func WorkerRegister(c *gin.Context) {
 		Address   string  `json:"address"`
 		PhoneNo   string  `json:"phone_no"`
 		CompanyID uint    `json:"company_id"`
-		Wage      float64 `json:"wage"`
+		Wage      float64 `json:"wage" binding:"gte=0"`
 	}
 
 	var req Req
