@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"clockit/backend/repository"
 	"clockit/backend/services"
 	"log"
 	"net/http"
@@ -59,7 +60,8 @@ func SupervisorRegister(c *gin.Context) {
 
 // Request body for worker availability
 type AvailabilityQuery struct {
-	Date string `form:"date" binding:"required"`
+	Date      string `form:"date" binding:"required"`
+	CompanyID uint   `form:"company_id" binding:"required"`
 }
 
 // Returns all workers available on a specific date
@@ -68,7 +70,7 @@ func GetWorkerAvailability(c *gin.Context) {
 	if err := c.ShouldBindQuery(&query); err != nil {
 		log.Printf("GetWorkerAvailability: invalid query: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "date query parameter is required (YYYY-MM-DD)",
+			"error": "date and company_id query parameters are required",
 		})
 		return
 	}
@@ -80,7 +82,11 @@ func GetWorkerAvailability(c *gin.Context) {
 		return
 	}
 
-	workers, err := services.GetWorkersAvailableForDate(date)
+	service := services.WorkerService{
+		Repo: &repository.WorkerRepository{},
+	}
+
+	workers, err := service.GetWorkersAvailable(date, query.CompanyID)
 	if err != nil {
 		log.Printf("GetWorkerAvailability: failed to fetch workers: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch availability"})
