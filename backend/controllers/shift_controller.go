@@ -19,8 +19,8 @@ func CreateShift(c *gin.Context) {
 
 	var req Req
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("CreateShift: invalid input: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		log.Printf("CreateShift: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
 		return
 	}
 
@@ -63,13 +63,13 @@ func AssignWorkerToShift(c *gin.Context) {
 	type Req struct {
 		ShiftID    uint `json:"shift_id" binding:"required"`
 		EmployeeID uint `json:"employee_id" binding:"required"`
-		AssignedBy uint `json:"assigned_by" binding:"required"`
+		AssignedBy uint `json:"assigned_by" binding:"required"` // Temporary field to track who made the assignment (supervisor ID) for auditing purposes. Replace with authenticated user context.
 	}
 
 	var req Req
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("AssignWorkerToShift: invalid input: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		log.Printf("AssignWorkerToShift: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
 		return
 	}
 

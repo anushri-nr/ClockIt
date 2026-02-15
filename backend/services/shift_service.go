@@ -36,7 +36,11 @@ func CreateShift(startTime, endTime time.Time, createdBy uint) (*models.Shift, e
 	}
 
 	// Load creator relation
-	database.DB.Preload("Creator").First(&shift, shift.ID)
+	if err := database.DB.Preload("Creator").First(&shift, shift.ID).Error; err != nil {
+		log.Printf("CreateShift: failed to load creator relation: %v", err)
+		// Assignment created successfully, but relations failed to load
+		// Return the shift without relations rather than failing the entire operation
+	}
 
 	log.Printf("CreateShift: shift created, id=%d", shift.ID)
 	return &shift, nil
@@ -67,14 +71,6 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 		return nil, errors.New("supervisor not found or insufficient permissions")
 	}
 
-	// Check if worker is already assigned to this shift
-	var existingAssignment models.ShiftAssignment
-	result := database.DB.Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&existingAssignment)
-	if result.RowsAffected > 0 {
-		log.Printf("AssignWorkerToShift: worker already assigned to this shift")
-		return nil, errors.New("worker already assigned to this shift")
-	}
-
 	assignment := models.ShiftAssignment{
 		ShiftID:    shiftID,
 		EmployeeID: employeeID,
@@ -88,7 +84,11 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 	}
 
 	// Load relations
-	database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID)
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
+		log.Printf("AssignWorkerToShift: failed to load relations: %v", err)
+		// Assignment created successfully, but relations failed to load
+		// Return the assignment without relations rather than failing the entire operation
+	}
 
 	log.Printf("AssignWorkerToShift: assignment created, id=%d", assignment.ID)
 	return &assignment, nil

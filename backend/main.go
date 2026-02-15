@@ -3,19 +3,12 @@ package main
 import (
 	"clockit/backend/database"
 	"clockit/backend/routes"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
-
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintln(w, "OK")
-}
 
 func main() {
 	// Determine database path from environment variable or use default

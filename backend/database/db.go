@@ -38,6 +38,7 @@ func Init(path string) error {
 
 	// Auto-migrate models
 	if err := DB.AutoMigrate(
+		&models.Company{},
 		&models.Employee{},
 		&models.WorkerAvailability{},
 		&models.Shift{},

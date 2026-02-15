@@ -14,9 +14,36 @@ func RegisterEmployee(name, email, password, address, phone string, companyID ui
 	// Check if email already exists
 	log.Printf("RegisterEmployee: checking if email exists: %s", email)
 	var existing models.Employee
-	if database.DB.Where("email = ?", email).First(&existing).RowsAffected == 1 {
+	err := database.DB.Where("email = ?", email).First(&existing).Error
+	if err == nil {
+		// Record found, email already exists
 		log.Printf("RegisterEmployee: email already exists: %s", email)
 		return nil, errors.New("employee with this email already exists")
+	}
+
+	// If error is not "record not found", it's a database error
+	if err.Error() != "record not found" {
+		log.Printf("RegisterEmployee: database error while checking email: %v", err)
+		return nil, err
+	}
+
+	// Validate wage
+	if wage < 0 {
+		log.Printf("RegisterEmployee: invalid wage: %f", wage)
+		return nil, errors.New("wage must be non-negative")
+	}
+
+	//Validate company exists
+	var company models.Company
+	if err := database.DB.First(&company, companyID).Error; err != nil {
+		log.Printf("RegisterEmployee: company not found: %v", err)
+		return nil, errors.New("company not found")
+	}
+
+	// Validate role
+	if role != models.RoleSupervisor && role != models.RoleWorker {
+		log.Printf("RegisterEmployee: invalid role: %s", role)
+		return nil, errors.New("invalid role")
 	}
 
 	// Hash password

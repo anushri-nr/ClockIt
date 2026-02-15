@@ -20,15 +20,16 @@ type Shift struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// Relations
-	Creator Employee `gorm:"foreignKey:CreatedBy" json:"creator,omitempty"`
+	Creator      Employee           `gorm:"foreignKey:CreatedBy;constraint:OnDelete:RESTRICT" json:"creator,omitempty"`
+	Assignments  []ShiftAssignment  `gorm:"foreignKey:ShiftID;constraint:OnDelete:CASCADE" json:"assignments,omitempty"`
 }
 
 // ShiftAssignment represents a worker assigned to a shift
 type ShiftAssignment struct {
 	ID         uint             `gorm:"primaryKey" json:"id"`
-	ShiftID    uint             `json:"shift_id"`
-	EmployeeID uint             `json:"employee_id"`
-	AssigneeID uint             `json:"assigned_by"`
+	ShiftID    uint             `gorm:"uniqueIndex:idx_shift_employee;constraint:OnDelete:CASCADE" json:"shift_id"`
+	EmployeeID uint             `gorm:"uniqueIndex:idx_shift_employee;constraint:OnDelete:RESTRICT" json:"employee_id"`
+	AssigneeID uint             `gorm:"constraint:OnDelete:RESTRICT" json:"assigned_by"`
 	AssignedAt time.Time        `json:"assigned_at"`
 	Status     AssignmentStatus `json:"status"`
 

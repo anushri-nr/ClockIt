@@ -11,7 +11,7 @@ func RegisterRoutes(r *gin.Engine) {
 	supervisorRoutes := r.Group("/api/supervisors")
 	{
 		supervisorRoutes.POST("/register", controllers.SupervisorRegister)
-		supervisorRoutes.POST("/workers/availability", controllers.GetWorkerAvailability)
+		supervisorRoutes.GET("/workers/availability", controllers.GetWorkerAvailability)
 	}
 
 	workerRoutes := r.Group("/api/workers")

@@ -23,8 +23,14 @@ func WorkerRegister(c *gin.Context) {
 
 	var req Req
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("WorkerRegister: invalid input: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		log.Printf("WorkerRegister: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		return
+	}
+
+	if req.Wage < 0 {
+		log.Printf("WorkerRegister: negative wage: %f", req.Wage)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wage must be non-negative"})
 		return
 	}
 
