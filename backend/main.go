@@ -6,6 +6,9 @@ import (
 	"log"
 	"os"
 
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -30,11 +33,19 @@ func main() {
 	}
 
 	r := gin.Default()
-	routes.RegisterRoutes(r)
-
-	log.Println("Starting ClockIt server on :8080")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	routes.RegisterRoutes(r) // Configure HTTP server with proper timeouts
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadTimeout:       10 * time.Second, // max time to read request body
+		ReadHeaderTimeout: 5 * time.Second,  // max time to read headers
+		WriteTimeout:      15 * time.Second, // max time to write response
+		IdleTimeout:       60 * time.Second, // max time for keep-alive connections
 	}
 
+	log.Println("Starting ClockIt server on :8080")
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
