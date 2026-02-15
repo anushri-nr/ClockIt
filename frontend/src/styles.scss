@@ -1,39 +1,73 @@
 
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
-@use '@angular/material' as mat;
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
-html {
-  height: 100%;
-  @include mat.theme((
-    color: (
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+
+:root {
+  --primary-color: #0f5f5c; 
+  --accent-color: #f4a261; 
+  --bg-color: #f4f7f6;      
+  --text-dark: #1f2328;
+  --card-bg: #ffffff;
 }
 
-body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  font-family: 'Space Grotesk', sans-serif; 
+  background-color: var(--bg-color);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
 
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
 
-  // Reset the user agent margin.
-  margin: 0;
+.page-container {
+  min-height: 100vh;
+  padding: 20px;
+  
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(254, 243, 230, 1) 0%, transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(232, 246, 242, 1) 0%, transparent 45%),
+    linear-gradient(180deg, #f7f2ea 0%, #f1ebe1 100%);
+}
+
+
+mat-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important; 
+  border: 1px solid rgba(0,0,0,0.05);
+  background: var(--card-bg);
+}
+
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 100%;
 }
 
-/* You can add global styles to this file, and also import other style files */
+.brand-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-icon {
+  font-size: 48px;     
+  height: 48px;       
+  width: 48px;         
+  color: #0f5f5c;      
+  background: #d7efe9; 
+  padding: 15px;
+  border-radius: 50%;  
+}

@@ -28,6 +28,32 @@
   transition: filter 0.2s ease;
 }
 
+.custom-toolbar {
+  background: linear-gradient(135deg, #0f5f5c 0%, #144e4b 45%, #1f2d2d 100%);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(15, 95, 92, 0.25);
+  border-radius: 16px;
+  padding: 6px 12px;
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 1rem;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
 .dashboard-root.modal-open .dashboard-content {
   filter: blur(6px);
 }

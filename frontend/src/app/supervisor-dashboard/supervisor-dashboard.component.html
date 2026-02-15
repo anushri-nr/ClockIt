@@ -1,154 +1,55 @@
 <div class="dashboard-root" [class.modal-open]="isShiftModalOpen || isAnnouncementModalOpen || isOpenShiftsModalOpen || isAssignWorkerModalOpen || isStatusSnapshotOpen">
-  <section *ngIf="isShiftModalOpen" class="shift-modal open" aria-label="Assign new shift">
+  <section *ngIf="isShiftModalOpen" class="shift-modal open" aria-label="Create shift">
     <div class="modal-card">
       <div class="modal-header">
         <div>
           <div class="eyebrow dark">Schedule · Shifts</div>
-          <h2>Assign New Shift</h2>
-          <p>Schedule &gt; Shifts &gt; Assign</p>
+          <h2>Create Shift</h2>
+          <p>Schedule &gt; Shifts &gt; Create</p>
         </div>
         <div class="modal-actions">
           <button class="btn ghost dark" type="button" (click)="closeShiftModal()">Cancel</button>
-          <button class="btn ghost dark">Save draft</button>
-          <button class="btn primary" type="button">Save / Assign</button>
+          <button class="btn primary" type="button" (click)="submitCreateShift()" [disabled]="isSubmittingShift">
+            Submit
+          </button>
         </div>
       </div>
 
       <div class="modal-grid">
         <div class="panel">
-          <h3>Employee</h3>
-          <label class="field">
-            <span>Select employee</span>
-            <div class="input">Search name, role, ID</div>
-          </label>
-          <div class="field-row">
-            <label class="field">
-              <span>Role / Position</span>
-              <div class="input">Front Desk Lead</div>
-            </label>
-            <label class="field">
-              <span>Location / Branch</span>
-              <div class="input">Main Store</div>
-            </label>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>Shift timing</h3>
-          <div class="field-row">
-            <label class="field">
-              <span>Date</span>
-              <div class="input">Feb 5, 2026</div>
-            </label>
-            <label class="field">
-              <span>Shift type</span>
-              <div class="input">Evening</div>
-            </label>
-          </div>
+          <h3>Shift details</h3>
           <div class="field-row">
             <label class="field">
               <span>Start time</span>
-              <div class="input">2:00 PM</div>
+              <input class="input" type="datetime-local" [(ngModel)]="createShift.startTime" />
             </label>
             <label class="field">
               <span>End time</span>
-              <div class="input">6:00 PM</div>
+              <input class="input" type="datetime-local" [(ngModel)]="createShift.endTime" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span>Created by</span>
+              <input class="input" type="text" placeholder="Supervisor name" [(ngModel)]="createShift.createdBy" />
+            </label>
+            <label class="field">
+              <span>Created at</span>
+              <input class="input read-only" type="text" [value]="createdAt" readonly />
             </label>
             <label class="field">
               <span>Total hours</span>
-              <div class="input read-only">4.0 hrs</div>
+              <input class="input read-only" type="text" [value]="totalHours" readonly />
             </label>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">
-            <h3>Breaks</h3>
-            <div class="toggle-pill">Add break</div>
-          </div>
-          <div class="field-row">
-            <label class="field">
-              <span>Duration</span>
-              <div class="input">30 min</div>
-            </label>
-            <label class="field">
-              <span>Paid / Unpaid</span>
-              <div class="input">Unpaid</div>
-            </label>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">
-            <h3>Repeat / Recurrence</h3>
-            <div class="toggle-pill">Repeat</div>
-          </div>
-          <div class="field-row">
-            <label class="field">
-              <span>Frequency</span>
-              <div class="input">Weekly</div>
-            </label>
-            <label class="field">
-              <span>End condition</span>
-              <div class="input">After 6 occurrences</div>
-            </label>
-          </div>
-          <div class="chip-row">
-            <span class="chip active">Mon</span>
-            <span class="chip">Tue</span>
-            <span class="chip">Wed</span>
-            <span class="chip active">Thu</span>
-            <span class="chip">Fri</span>
-            <span class="chip">Sat</span>
-            <span class="chip">Sun</span>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>Notes & tags</h3>
-          <div class="textarea">Closing duty, lock up. Handle cash drop.</div>
-          <div class="chip-row">
-            <span class="chip tag">Urgent</span>
-            <span class="chip">Needs training</span>
-            <span class="chip">Keyholder</span>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>Validation & warnings</h3>
-          <ul class="warning-list">
-            <li>⚠️ Overlaps with another shift (12:00–2:00pm)</li>
-            <li>⚠️ End time must be after start time</li>
-            <li>⚠️ Exceeds weekly hours limit (41/40)</li>
-          </ul>
-        </div>
-
-        <div class="panel">
-          <h3>Confirmation & notifications</h3>
-          <div class="check-row">
-            <div>
-              <div class="request-title">Notify employee</div>
-              <div class="request-sub">Send schedule update via SMS & app</div>
-            </div>
-            <div class="toggle-pill active">On</div>
-          </div>
-          <div class="check-row">
-            <div>
-              <div class="request-title">Require acceptance</div>
-              <div class="request-sub">Shift requires employee confirmation</div>
-            </div>
-            <div class="toggle-pill">Off</div>
-          </div>
-          <div class="status-preview">
-            <span>Status</span>
-            <span class="status-badge pending">Pending</span>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn ghost dark" type="button" (click)="closeShiftModal()">Cancel</button>
-        <button class="btn primary" type="button">Assign Shift</button>
+        <button class="btn primary" type="button" (click)="submitCreateShift()" [disabled]="isSubmittingShift">
+          Submit
+        </button>
       </div>
     </div>
   </section>
@@ -207,108 +108,6 @@
           <button class="btn primary" type="button">Notify eligible workers</button>
         </div>
       </div>
-
-      <div class="open-shifts-hero">
-        <div class="open-count">
-          <div class="open-number">5</div>
-          <div class="open-label">OPEN SHIFTS</div>
-        </div>
-        <div class="open-breakdown">
-          <span class="role-chip">🧾 Cashier ×2</span>
-          <span class="role-chip">☕ Barista ×1</span>
-          <span class="role-chip">📦 Stock ×2</span>
-        </div>
-        <button class="btn ghost dark" type="button">Manage open shifts</button>
-      </div>
-
-      <div class="quick-stats">
-        <div class="stat-card">
-          <div class="stat-label">Urgent</div>
-          <div class="stat-value">2</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Soon</div>
-          <div class="stat-value">3</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Avg fill time</div>
-          <div class="stat-value">3.4 hrs</div>
-        </div>
-      </div>
-
-      <div class="open-filters">
-        <label class="field">
-          <span>Role</span>
-          <div class="input">All roles</div>
-        </label>
-        <label class="field">
-          <span>Date</span>
-          <div class="input">This week</div>
-        </label>
-        <label class="field">
-          <span>Location</span>
-          <div class="input">Main Store</div>
-        </label>
-      </div>
-
-      <div class="open-list">
-        <div class="open-card">
-          <div class="open-main">
-            <div class="open-date">📅 Thu, Feb 5</div>
-            <div class="open-time">⏰ 2:00–6:00 PM</div>
-            <div class="open-role">🧑 Front Desk</div>
-            <div class="open-loc">📍 Main Store · Lobby</div>
-            <div class="open-need">👥 1 of 2 needed</div>
-          </div>
-          <div class="open-meta">
-            <span class="urgency urgent">Urgent</span>
-            <div class="warnings">
-              ⚠️ Overtime risk · ⚠️ Skill mismatch
-            </div>
-          </div>
-          <div class="open-actions">
-            <button class="btn small" type="button" (click)="openAssignWorkerModal()">Assign worker</button>
-          </div>
-        </div>
-
-        <div class="open-card">
-          <div class="open-main">
-            <div class="open-date">📅 Fri, Feb 6</div>
-            <div class="open-time">⏰ 9:00–1:00 PM</div>
-            <div class="open-role">🧑 Cashier</div>
-            <div class="open-loc">📍 Main Store · Front</div>
-            <div class="open-need">👥 1 of 1 needed</div>
-          </div>
-          <div class="open-meta">
-            <span class="urgency soon">Soon</span>
-            <div class="warnings">
-              ⚠️ Worker unavailable
-            </div>
-          </div>
-          <div class="open-actions">
-            <button class="btn small" type="button" (click)="openAssignWorkerModal()">Assign worker</button>
-          </div>
-        </div>
-
-        <div class="open-card">
-          <div class="open-main">
-            <div class="open-date">📅 Sat, Feb 7</div>
-            <div class="open-time">⏰ 12:00–5:00 PM</div>
-            <div class="open-role">🧑 Stock</div>
-            <div class="open-loc">📍 Main Store · Backroom</div>
-            <div class="open-need">👥 1 of 2 needed</div>
-          </div>
-          <div class="open-meta">
-            <span class="urgency soon">Soon</span>
-            <div class="warnings">
-              ⚠️ Overtime risk
-            </div>
-          </div>
-          <div class="open-actions">
-            <button class="btn small" type="button" (click)="openAssignWorkerModal()">Assign worker</button>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -318,55 +117,57 @@
         <div>
           <div class="eyebrow dark">Open Shift</div>
           <h2>Assign Worker</h2>
-          <p>Enter employee ID and assign required time.</p>
+          <p>Select a shift and assign an available worker.</p>
         </div>
         <div class="modal-actions">
           <button class="btn ghost dark" type="button" (click)="closeAssignWorkerModal()">Cancel</button>
-          <button class="btn primary" type="button">Assign</button>
+          <button class="btn primary" type="button" (click)="assignWorkerToShift()">Assign</button>
         </div>
       </div>
 
       <div class="modal-grid">
         <div class="panel">
-          <h3>Employee</h3>
-          <label class="field">
-            <span>Employee ID</span>
-            <div class="input">Enter employee ID</div>
-          </label>
-          <label class="field">
-            <span>Role</span>
-            <div class="input">Auto-filled</div>
-          </label>
+          <h3>Shifts created</h3>
+          <ul class="list compact">
+            <li *ngFor="let shift of mockShifts">
+              <div>
+                <div class="request-title">
+                  {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+                </div>
+                <div class="request-sub">
+                  Created by {{ shift.createdBy }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
+                </div>
+              </div>
+            </li>
+          </ul>
         </div>
 
         <div class="panel">
-          <h3>Assign time</h3>
-          <div class="field-row">
-            <label class="field">
-              <span>Date</span>
-              <div class="input">Thu, Feb 5</div>
-            </label>
-            <label class="field">
-              <span>Required time</span>
-              <div class="input">2:00–6:00 PM</div>
-            </label>
-          </div>
-          <div class="field-row">
-            <label class="field">
-              <span>Start time</span>
-              <div class="input">2:00 PM</div>
-            </label>
-            <label class="field">
-              <span>End time</span>
-              <div class="input">6:00 PM</div>
-            </label>
-          </div>
+          <h3>Assignment</h3>
+          <label class="field">
+            <span>Select shift</span>
+            <select class="input" [(ngModel)]="selectedShiftId">
+              <option value="">Choose a shift</option>
+              <option *ngFor="let shift of mockShifts" [value]="shift.id">
+                {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+              </option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Select worker</span>
+            <select class="input" [(ngModel)]="selectedWorkerId">
+              <option value="">Choose a worker</option>
+              <option *ngFor="let worker of mockWorkers" [value]="worker.id">
+                {{ worker.name }} ({{ worker.id }})
+              </option>
+            </select>
+          </label>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn ghost dark" type="button" (click)="closeAssignWorkerModal()">Cancel</button>
-        <button class="btn primary" type="button">Assign worker</button>
+        <button class="btn primary" type="button" (click)="assignWorkerToShift()">Assign worker</button>
       </div>
     </div>
   </section>
@@ -420,45 +221,43 @@
   </section>
 
   <div class="dashboard-content">
+    <mat-toolbar class="custom-toolbar">
+      <span class="brand">ClockIt</span>
+      <span class="spacer"></span>
+      <div class="user-profile">
+        <span>Hello, Rahul</span>
+        <button mat-icon-button type="button">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+      </div>
+    </mat-toolbar>
     <header class="hero">
       <div class="hero-text">
         <div class="eyebrow">Supervisor Dashboard</div>
-        <h1>Today: Thu, Feb 5</h1>
+        <h1>{{ currentDateTime }}</h1>
         <p>Coverage status, scheduling, and approvals for the main store.</p>
       </div>
       <div class="hero-actions">
-        <button class="btn primary" type="button" (click)="openShiftModal()">New shift</button>
-        <button class="btn ghost" type="button" (click)="openAnnouncementModal()">Send announcement</button>
+        <button class="btn primary" type="button" (click)="openShiftModal()">Create shift</button>
+        <button class="btn ghost" type="button" (click)="openAssignWorkerModal()">Assign shift</button>
       </div>
     </header>
 
   <section class="summary-grid">
     <article class="summary-card">
       <div class="summary-title">Today’s Coverage</div>
-      <div class="summary-metric">42 scheduled</div>
-      <div class="summary-sub">39 checked-in · 2 absent · 1 no-show</div>
-      <button class="summary-cta" type="button" (click)="openStatusSnapshot()">Status snapshot</button>
     </article>
     <article class="summary-card clickable" role="button" tabindex="0" (click)="openOpenShiftsModal()">
       <div class="summary-title">Open Shifts</div>
-      <div class="summary-metric">5 open</div>
-      <div class="summary-sub">2 cashier · 1 barista · 2 stock</div>
-      <div class="summary-cta">Gap snapshot</div>
     </article>
     <article class="summary-card alert">
       <div class="summary-title">Understaffed alerts</div>
-      <div class="summary-metric">3</div>
-      <div class="summary-sub">Front desk needs 1 more 2–6pm</div>
     </article>
     <article class="summary-card">
       <div class="summary-title">Overtime risk</div>
-      <div class="summary-metric">4 nearing limit</div>
-      <div class="summary-sub">Sam R. hits 38/40 hrs</div>
     </article>
     <article class="summary-card">
       <div class="summary-title">Pending approvals</div>
-      <div class="summary-metric">7</div>
-      <div class="summary-sub">3 time-off · 2 swaps · 2 edits</div>
     </article>
   </section>
 
@@ -496,257 +295,22 @@
       </div>
 
       <div class="schedule-grid" *ngIf="scheduleView === 'today'">
-        <div class="schedule-row">
-          <div class="time">8:00–12:00</div>
-          <div class="role">Front Desk</div>
-          <div class="location">Main Store</div>
-          <div class="assignee">Maria L.</div>
-          <div class="status ok">Checked-in</div>
-          <div class="actions">
-            <button class="link" type="button">Edit</button>
-            <button class="link" type="button">Assign</button>
-            <button class="link" type="button">Mark open</button>
-            <button class="link" type="button">Copy next week</button>
-          </div>
-        </div>
-        <div class="schedule-row">
-          <div class="time">10:00–2:00</div>
-          <div class="role">Cashier</div>
-          <div class="location">Main Store</div>
-          <div class="assignee">Open shift</div>
-          <div class="status warn">Unfilled</div>
-          <div class="actions">
-            <button class="link" type="button">Edit</button>
-            <button class="link" type="button">Assign</button>
-            <button class="link" type="button">Mark open</button>
-            <button class="link" type="button">Copy next week</button>
-          </div>
-        </div>
-        <div class="schedule-row">
-          <div class="time">12:00–6:00</div>
-          <div class="role">Stock</div>
-          <div class="location">Main Store</div>
-          <div class="assignee">Devon P.</div>
-          <div class="status risk">Late check-in</div>
-          <div class="actions">
-            <button class="link" type="button">Edit</button>
-            <button class="link" type="button">Assign</button>
-            <button class="link" type="button">Mark open</button>
-            <button class="link" type="button">Copy next week</button>
-          </div>
-        </div>
-        <div class="schedule-row">
-          <div class="time">2:00–6:00</div>
-          <div class="role">Front Desk</div>
-          <div class="location">Main Store</div>
-          <div class="assignee">Open shift</div>
-          <div class="status warn">Needs 1 more</div>
-          <div class="actions">
-            <button class="link" type="button">Edit</button>
-            <button class="link" type="button">Assign</button>
-            <button class="link" type="button">Mark open</button>
-            <button class="link" type="button">Copy next week</button>
-          </div>
-        </div>
       </div>
 
       <div class="week-grid" *ngIf="scheduleView === 'week'">
-        <div class="week-row">
-          <div class="week-day">
-            <div class="day-label">Mon</div>
-            <div class="week-chip ok">8–12 Front Desk</div>
-            <div class="week-chip warn">2–6 Open</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Tue</div>
-            <div class="week-chip ok">10–2 Cashier</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Wed</div>
-            <div class="week-chip ok">12–6 Stock</div>
-            <div class="week-chip info">3–7 Training</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Thu</div>
-            <div class="week-chip warn">2–6 Front Desk</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Fri</div>
-            <div class="week-chip ok">9–1 Cashier</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Sat</div>
-            <div class="week-chip ok">11–4 Stock</div>
-          </div>
-          <div class="week-day">
-            <div class="day-label">Sun</div>
-            <div class="week-chip info">Closed</div>
-          </div>
-        </div>
       </div>
     </article>
 
     <aside class="side-panel">
       <article class="card">
         <h3>Alerts & tasks</h3>
-        <ul class="list">
-          <li>
-            <div class="tag danger">No-show</div>
-            <div class="item-text">Jalen K. missed 9:00 shift</div>
-          </li>
-          <li>
-            <div class="tag warn">Late</div>
-            <div class="item-text">Devon P. 12 min late</div>
-          </li>
-          <li>
-            <div class="tag warn">Conflict</div>
-            <div class="item-text">Tia W. double-booked 3–5pm</div>
-          </li>
-          <li>
-            <div class="tag info">Certs</div>
-            <div class="item-text">Forklift certs expiring in 10 days</div>
-          </li>
-          <li>
-            <div class="tag info">Messages</div>
-            <div class="item-text">2 messages need reply</div>
-          </li>
-        </ul>
       </article>
 
       <article class="card">
         <h3>Requests & approvals</h3>
-        <div class="request">
-          <div>
-            <div class="request-title">Time-off: Priya S.</div>
-            <div class="request-sub">Feb 12–13 · Staffing impact: -1 cashier</div>
-          </div>
-          <div class="request-actions">
-            <button class="btn small">Approve</button>
-            <button class="btn small ghost">Deny</button>
-          </div>
-        </div>
-        <div class="request">
-          <div>
-            <div class="request-title">Swap: Miguel ↔ Sara</div>
-            <div class="request-sub">Swap 2–6pm today · Both confirmed</div>
-          </div>
-          <div class="request-actions">
-            <button class="btn small">Approve</button>
-            <button class="btn small ghost">Deny</button>
-          </div>
-        </div>
-        <button class="btn ghost full">Auto-suggest replacement</button>
       </article>
     </aside>
   </section>
 
-  <section class="grid-2">
-    <article class="card">
-      <h2>Attendance & time tracking</h2>
-      <div class="attendance">
-        <div class="attendance-row">
-          <span>Checked-in</span>
-          <strong>32</strong>
-        </div>
-        <div class="attendance-row">
-          <span>On break</span>
-          <strong>4</strong>
-        </div>
-        <div class="attendance-row">
-          <span>Checked-out</span>
-          <strong>3</strong>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="timesheet">
-        <div>
-          <div class="request-title">Timesheet approvals</div>
-          <div class="request-sub">Week of Feb 2–8 · 18 pending</div>
-        </div>
-        <button class="btn small">Review</button>
-      </div>
-      <div class="timesheet">
-        <div>
-          <div class="request-title">Edit punches</div>
-          <div class="request-sub">2 flagged · audit trail enabled</div>
-        </div>
-        <button class="btn small ghost">Open</button>
-      </div>
-    </article>
-
-    <article class="card">
-      <h2>Team management</h2>
-      <ul class="list compact">
-        <li>
-          <div>
-            <div class="request-title">Ava N. · Front Desk</div>
-            <div class="request-sub">Availability: M–F · 28 hrs · 0 late</div>
-          </div>
-          <button class="btn small ghost">View</button>
-        </li>
-        <li>
-          <div>
-            <div class="request-title">Malik J. · Stock</div>
-            <div class="request-sub">Availability: Weekends · 34 hrs · 1 no-show</div>
-          </div>
-          <button class="btn small ghost">View</button>
-        </li>
-        <li>
-          <div>
-            <div class="request-title">Nora K. · Cashier</div>
-            <div class="request-sub">Availability: Tue–Sat · 22 hrs · 2 late</div>
-          </div>
-          <button class="btn small ghost">View</button>
-        </li>
-      </ul>
-      <div class="inline-actions">
-        <button class="btn">Add employee</button>
-        <button class="btn ghost">Send invite</button>
-      </div>
-    </article>
-  </section>
-
-  <section class="grid-3">
-    <article class="card">
-      <h2>Reporting</h2>
-      <ul class="list compact">
-        <li>
-          <div class="item-text">Hours by employee / role / location</div>
-          <button class="btn small ghost">Open</button>
-        </li>
-        <li>
-          <div class="item-text">Overtime summary</div>
-          <button class="btn small ghost">Open</button>
-        </li>
-        <li>
-          <div class="item-text">Attendance report</div>
-          <button class="btn small ghost">Open</button>
-        </li>
-        <li>
-          <div class="item-text">Staffing vs demand (soon)</div>
-          <button class="btn small ghost">Preview</button>
-        </li>
-      </ul>
-    </article>
-
-    <article class="card">
-      <h2>Communication</h2>
-      <div class="comms">
-        <button class="btn full">Announce to Main Store</button>
-        <button class="btn full ghost">Message a shift</button>
-        <button class="btn full ghost">Notify open shift</button>
-      </div>
-    </article>
-
-    <article class="card">
-      <h2>Settings</h2>
-      <ul class="list compact">
-        <li><div class="item-text">Roles & shift templates</div></li>
-        <li><div class="item-text">Locations / departments</div></li>
-        <li><div class="item-text">Rules: max hours, breaks, lead time</div></li>
-        <li><div class="item-text">Permissions: supervisors vs managers</div></li>
-      </ul>
-    </article>
-  </section>
   </div>
 </div>
