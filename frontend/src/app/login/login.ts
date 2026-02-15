@@ -7,6 +7,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../services/auth';
+import { MatIconModule } from '@angular/material/icon';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-login',
@@ -18,12 +20,24 @@ import { AuthService } from '../services/auth';
     MatCardModule, 
     MatInputModule, 
     MatFormFieldModule, 
-    MatButtonModule
+    MatButtonModule,
+    MatIconModule,
+    MatToolbarModule
   ],
   template: `
-    <div class="login-container">
-      <mat-card class="login-card">
-        <mat-card-header>
+    <div class="page-container flex-center">
+    <div class="page-container flex-center">
+  
+  <mat-toolbar class="auth-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+  </mat-toolbar>
+
+      <mat-card class="auth-card">
+      <div class="brand-logo">
+  <mat-icon class="logo-icon">schedule</mat-icon>
+</div>
+        <mat-card-header class="centered-header">
           <mat-card-title>{{ currentRole | titlecase }} Login</mat-card-title>
         </mat-card-header>
         
@@ -43,8 +57,8 @@ import { AuthService } from '../services/auth';
             </mat-form-field>
 
             <div class="actions">
-              <button mat-raised-button color="primary" type="submit" 
-                      [disabled]="!loginForm.valid" class="full-width">
+              <button mat-flat-button color="primary" type="submit" 
+                      [disabled]="!loginForm.valid" class="full-width large-btn">
                 Sign In
               </button>
             </div>
@@ -52,50 +66,63 @@ import { AuthService } from '../services/auth';
         </mat-card-content>
 
         <mat-card-actions class="center-actions">
-           <span style="font-size: 12px; color: gray;">New here?</span>
+           <span style="font-size: 14px; color: #666;">New here?</span>
            <button mat-button color="accent" (click)="onRegister()">
-             Create {{ currentRole | titlecase }} Account
+             Create Account
            </button>
         </mat-card-actions>
       </mat-card>
     </div>
   `,
   styles: [`
-  .landing-container { 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    height: 100vh; 
-    /* No background color here, we let the global gradient shine through */
-  }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+    }
 
-  .landing-card { 
-    width: 400px; 
-    padding: 40px; /* More breathing room */
-    text-align: center; 
-    background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
-    backdrop-filter: blur(10px); /* The "Frosted Glass" effect (Modern!) */
-  }
+    .centered-header {
+      justify-content: center;
+      margin-bottom: 20px;
+    }
 
-  mat-card-title { 
-    font-size: 2.2rem; 
-    font-weight: 300; /* Thinner, more elegant font */
-    color: #333;
-    margin-bottom: 5px; 
-  }
+    .full-width {
+      width: 100%;
+      margin-bottom: 5px;
+    }
 
-  mat-card-subtitle {
-    font-size: 1rem;
-    color: #666;
-    margin-bottom: 30px; /* Push content down */
-  }
+    .large-btn {
+      padding: 25px 0; /* Bigger, clickable buttons */
+      font-size: 1.1rem;
+    }
 
-  /* Make the icons in the buttons pop */
-  mat-icon { 
-    vertical-align: middle; 
-    margin-right: 5px;
-  }
-`]
+    .center-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+      .auth-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #0f5f5c; /* Rahul's Green */
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
+  padding: 0 24px;
+  box-sizing: border-box; /* Prevents scrollbar */
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 1.2rem;
+}
+
+.spacer { flex: 1 1 auto; }
+  `]
 })
 export class LoginComponent implements OnInit {
   email = '';
@@ -126,19 +153,14 @@ export class LoginComponent implements OnInit {
     
     this.authService.login(this.email, this.password, this.currentRole)
     .subscribe((success) => {
-
       this.isLoading = false;
-
       if(success) {
-        alert("Login Succesful");
         if(this.currentRole.toLowerCase() == "worker") {
           this.router.navigate(['worker-dashboard']);
-        }
-        else {
+        } else {
           alert("Supervisor Dashboard not built yet");
         }
-      }
-      else {
+      } else {
         alert("Login failed!(Check the console)")
       }
     });

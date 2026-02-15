@@ -1,12 +1,11 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Added for basic directives
+import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-
-// MATERIAL IMPORTS
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatToolbar, MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-landing',
@@ -14,15 +13,26 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [
     CommonModule,
     RouterModule,
-    MatCardModule, 
-    MatButtonModule, 
-    MatButtonToggleModule, 
-    MatIconModule
+    MatCardModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatIconModule,
+    MatToolbarModule
   ],
   template: `
-    <div class="landing-container">
-      <mat-card class="landing-card">
-        <mat-card-header>
+    <div class="page-container flex-center">
+    <div class="page-container flex-center">
+  
+  <mat-toolbar class="auth-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+  </mat-toolbar>
+      
+      <mat-card class="auth-card">
+      <div class="brand-logo">
+  <mat-icon class="logo-icon">schedule</mat-icon>
+</div>
+        <mat-card-header class="centered-header">
           <mat-card-title>Welcome to ClockIt</mat-card-title>
           <mat-card-subtitle>Select your portal to continue</mat-card-subtitle>
         </mat-card-header>
@@ -43,41 +53,56 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: [`
-  .landing-container { 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    height: 100vh; 
-    /* No background color here, we let the global gradient shine through */
-  }
+    /* Only layout styles remain. Colors come from styles.scss */
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+      text-align: center;
+    }
 
-  .landing-card { 
-    width: 400px; 
-    padding: 40px; /* More breathing room */
-    text-align: center; 
-    background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
-    backdrop-filter: blur(10px); /* The "Frosted Glass" effect (Modern!) */
-  }
+    .centered-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
 
-  mat-card-title { 
-    font-size: 2.2rem; 
-    font-weight: 300; /* Thinner, more elegant font */
-    color: #333;
-    margin-bottom: 5px; 
-  }
+    mat-card-title {
+      font-size: 2rem;
+      font-weight: 700; /* Bold like Rahul's headers */
+      margin-bottom: 10px;
+    }
 
-  mat-card-subtitle {
-    font-size: 1rem;
-    color: #666;
-    margin-bottom: 30px; /* Push content down */
-  }
+    mat-icon {
+      margin-right: 8px;
+    }
+    
+    .role-selection {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+      .auth-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #0f5f5c; /* Rahul's Green */
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
+  padding: 0 24px;
+  box-sizing: border-box; /* Prevents scrollbar */
+}
 
-  /* Make the icons in the buttons pop */
-  mat-icon { 
-    vertical-align: middle; 
-    margin-right: 5px;
-  }
-`]
+.brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 1.2rem;
+}
+
+.spacer { flex: 1 1 auto; }
+  `]
 })
 export class LandingComponent {
   constructor(private router: Router) { }

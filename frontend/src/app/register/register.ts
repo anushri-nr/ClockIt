@@ -7,6 +7,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../services/auth';
+import { MatIconModule } from '@angular/material/icon';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-register',
@@ -18,13 +20,25 @@ import { AuthService } from '../services/auth';
     MatCardModule, 
     MatInputModule, 
     MatFormFieldModule, 
-    MatButtonModule
+    MatButtonModule,
+    MatIconModule,
+    MatToolbarModule
   ], 
   template: `
-    <div class="register-container">
-      <mat-card class="register-card">
-        <mat-card-header>
-          <mat-card-title>Register as {{ user.role | titlecase }}</mat-card-title>
+    <div class="page-container flex-center">
+    <div class="page-container flex-center">
+  
+  <mat-toolbar class="auth-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+  </mat-toolbar>
+
+      <mat-card class="auth-card">
+      <div class="brand-logo">
+  <mat-icon class="logo-icon">schedule</mat-icon>
+</div>
+        <mat-card-header class="centered-header">
+          <mat-card-title>Create {{ user.role | titlecase }} Account</mat-card-title>
         </mat-card-header>
         
         <mat-card-content>
@@ -33,36 +47,31 @@ import { AuthService } from '../services/auth';
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Full Name</mat-label>
               <input matInput [(ngModel)]="user.name" name="name" required>
-              <mat-error>Name is required</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Email</mat-label>
               <input matInput type="email" [(ngModel)]="user.email" name="email" required email>
-              <mat-error>Please enter a valid email</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Password</mat-label>
               <input matInput type="password" [(ngModel)]="user.password" name="password" required minlength="6">
-              <mat-error>Password must be at least 6 characters</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Phone Number</mat-label>
-              <input matInput type="tel" [(ngModel)]="user.phoneNumber" name="phoneNumber" required pattern="[0-9]*">
-              <mat-error>Valid phone number is required</mat-error>
+              <input matInput type="tel" [(ngModel)]="user.phoneNumber" name="phoneNumber" required>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Address</mat-label>
-              <textarea matInput [(ngModel)]="user.address" name="address" required rows="3"></textarea>
-              <mat-error>Address is required</mat-error>
+              <textarea matInput [(ngModel)]="user.address" name="address" required rows="2"></textarea>
             </mat-form-field>
 
             <div class="actions">
-              <button mat-raised-button color="primary" type="submit" 
-                      [disabled]="!registerForm.valid">
+              <button mat-flat-button color="primary" type="submit" 
+                      [disabled]="!registerForm.valid" class="full-width large-btn">
                 Create Account
               </button>
               
@@ -77,50 +86,55 @@ import { AuthService } from '../services/auth';
     </div>
   `,
   styles: [`
-  .register-container { 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    min-height: 100vh; 
-    /* The global gradient from styles.scss provides the background */
-    padding: 20px; 
-  }
-
-  .register-card { 
-    width: 100%; 
-    max-width: 500px; /* Slightly wider than login for better spacing */
-    padding: 30px;
+    .auth-card {
+      width: 100%;
+      max-width: 450px;
+      padding: 30px;
+    }
     
-    /* THE GLASS EFFECT */
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  }
+    .centered-header {
+      justify-content: center;
+      margin-bottom: 20px;
+    }
 
-  .full-width { 
-    width: 100%; 
-    margin-bottom: 5px; 
-  }
+    .full-width { 
+      width: 100%; 
+      margin-bottom: 8px; 
+    }
 
-  .actions {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* More breathing room between buttons */
-    margin-top: 20px;
-  }
+    .large-btn {
+      padding: 25px 0;
+      font-size: 1.1rem;
+    }
 
-  mat-card-title {
-    font-size: 1.8rem;
-    text-align: center;
-    color: #333;
-    margin-bottom: 20px;
-    font-weight: 300;
-  }
-`]
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+      .auth-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #0f5f5c; /* Rahul's Green */
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
+  padding: 0 24px;
+  box-sizing: border-box; /* Prevents scrollbar */
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 1.2rem;
+}
+
+.spacer { flex: 1 1 auto; }
+  `]
 })
 export class RegisterComponent implements OnInit {
-  
   user = {
     name: '',
     email: '',
@@ -129,7 +143,6 @@ export class RegisterComponent implements OnInit {
     address: '',     
     role: 'Worker' 
   };
-
   isLoading = false;
 
   constructor(
@@ -152,16 +165,13 @@ export class RegisterComponent implements OnInit {
     this.authService.register(this.user)
     .subscribe((success) => {
       if(success) {
-        alert("Registration Succesful");
         if(this.user.role.toLowerCase() == "worker") {
           this.router.navigate(['worker-dashboard']);
-        }
-        else {
+        } else {
           alert("Supervisor Dashboard not built yet");
         }
-      }
-      else {
-        alert("Registration failed (Check the console)");
+      } else {
+        alert("Registration failed");
       }
     });
   }
