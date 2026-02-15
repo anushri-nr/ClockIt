@@ -1,0 +1,316 @@
+<div class="dashboard-root" [class.modal-open]="isShiftModalOpen || isAnnouncementModalOpen || isOpenShiftsModalOpen || isAssignWorkerModalOpen || isStatusSnapshotOpen">
+  <section *ngIf="isShiftModalOpen" class="shift-modal open" aria-label="Create shift">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Schedule · Shifts</div>
+          <h2>Create Shift</h2>
+          <p>Schedule &gt; Shifts &gt; Create</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeShiftModal()">Cancel</button>
+          <button class="btn primary" type="button" (click)="submitCreateShift()" [disabled]="isSubmittingShift">
+            Submit
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="panel">
+          <h3>Shift details</h3>
+          <div class="field-row">
+            <label class="field">
+              <span>Start time</span>
+              <input class="input" type="datetime-local" [(ngModel)]="createShift.startTime" />
+            </label>
+            <label class="field">
+              <span>End time</span>
+              <input class="input" type="datetime-local" [(ngModel)]="createShift.endTime" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label class="field">
+              <span>Created by</span>
+              <input class="input" type="text" placeholder="Supervisor name" [(ngModel)]="createShift.createdBy" />
+            </label>
+            <label class="field">
+              <span>Created at</span>
+              <input class="input read-only" type="text" [value]="createdAt" readonly />
+            </label>
+            <label class="field">
+              <span>Total hours</span>
+              <input class="input read-only" type="text" [value]="totalHours" readonly />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn ghost dark" type="button" (click)="closeShiftModal()">Cancel</button>
+        <button class="btn primary" type="button" (click)="submitCreateShift()" [disabled]="isSubmittingShift">
+          Submit
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="isAnnouncementModalOpen" class="shift-modal open" aria-label="Send announcement">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Communication</div>
+          <h2>Send Announcement</h2>
+          <p>Notify employees with a quick broadcast.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeAnnouncementModal()">Cancel</button>
+          <button class="btn primary" type="button">Send</button>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="panel">
+          <h3>Recipients</h3>
+          <label class="field">
+            <span>Employee ID</span>
+            <div class="input">Search or paste IDs</div>
+          </label>
+          <div class="chip-row">
+            <span class="chip active">Main Store</span>
+            <span class="chip">All employees</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Message</h3>
+          <div class="textarea">Team, please confirm your shifts for today by 1pm.</div>
+          <div class="request-sub">SMS + in-app notification</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn ghost dark" type="button" (click)="closeAnnouncementModal()">Cancel</button>
+        <button class="btn primary" type="button">Send announcement</button>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="isOpenShiftsModalOpen" class="shift-modal open" aria-label="Open shifts">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Staffing</div>
+          <h2>Open Shifts</h2>
+          <p>Track gaps by role, urgency, and staffing needs.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeOpenShiftsModal()">Close</button>
+          <button class="btn primary" type="button">Notify eligible workers</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="isAssignWorkerModalOpen" class="shift-modal open" aria-label="Assign worker">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Open Shift</div>
+          <h2>Assign Worker</h2>
+          <p>Select a shift and assign an available worker.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeAssignWorkerModal()">Cancel</button>
+          <button class="btn primary" type="button" (click)="assignWorkerToShift()">Assign</button>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="panel">
+          <h3>Shifts created</h3>
+          <ul class="list compact">
+            <li *ngFor="let shift of mockShifts">
+              <div>
+                <div class="request-title">
+                  {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+                </div>
+                <div class="request-sub">
+                  Created by {{ shift.createdBy }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h3>Assignment</h3>
+          <label class="field">
+            <span>Select shift</span>
+            <select class="input" [(ngModel)]="selectedShiftId">
+              <option value="">Choose a shift</option>
+              <option *ngFor="let shift of mockShifts" [value]="shift.id">
+                {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+              </option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Select worker</span>
+            <select class="input" [(ngModel)]="selectedWorkerId">
+              <option value="">Choose a worker</option>
+              <option *ngFor="let worker of mockWorkers" [value]="worker.id">
+                {{ worker.name }} ({{ worker.id }})
+              </option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn ghost dark" type="button" (click)="closeAssignWorkerModal()">Cancel</button>
+        <button class="btn primary" type="button" (click)="assignWorkerToShift()">Assign worker</button>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="isStatusSnapshotOpen" class="shift-modal open" aria-label="Status snapshot">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Coverage</div>
+          <h2>Status Snapshot</h2>
+          <p>Today’s coverage summary for the main store.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeStatusSnapshot()">Close</button>
+        </div>
+      </div>
+
+      <div class="modal-grid">
+        <div class="panel">
+          <h3>Today’s Coverage</h3>
+          <div class="attendance">
+            <div class="attendance-row">
+              <span>Scheduled</span>
+              <strong>42</strong>
+            </div>
+            <div class="attendance-row">
+              <span>Checked-in</span>
+              <strong>39</strong>
+            </div>
+            <div class="attendance-row">
+              <span>Absent</span>
+              <strong>2</strong>
+            </div>
+            <div class="attendance-row">
+              <span>No-show</span>
+              <strong>1</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Notes</h3>
+          <div class="textarea">Front Desk down 1 headcount 2–6pm. Cashier coverage OK.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn ghost dark" type="button" (click)="closeStatusSnapshot()">Close</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="dashboard-content">
+    <mat-toolbar class="custom-toolbar">
+      <span class="brand">ClockIt</span>
+      <span class="spacer"></span>
+      <div class="user-profile">
+        <span>Hello, Rahul</span>
+        <button mat-icon-button type="button">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+      </div>
+    </mat-toolbar>
+    <header class="hero">
+      <div class="hero-text">
+        <div class="eyebrow">Supervisor Dashboard</div>
+        <h1>{{ currentDateTime }}</h1>
+        <p>Coverage status, scheduling, and approvals for the main store.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn primary" type="button" (click)="openShiftModal()">Create shift</button>
+        <button class="btn ghost" type="button" (click)="openAssignWorkerModal()">Assign shift</button>
+      </div>
+    </header>
+
+  <section class="summary-grid">
+    <article class="summary-card">
+      <div class="summary-title">Today’s Coverage</div>
+    </article>
+    <article class="summary-card clickable" role="button" tabindex="0" (click)="openOpenShiftsModal()">
+      <div class="summary-title">Open Shifts</div>
+    </article>
+    <article class="summary-card alert">
+      <div class="summary-title">Understaffed alerts</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-title">Overtime risk</div>
+    </article>
+    <article class="summary-card">
+      <div class="summary-title">Pending approvals</div>
+    </article>
+  </section>
+
+  <section class="main-grid">
+    <article class="card schedule-card">
+      <div class="card-header">
+        <div>
+          <h2>Schedule view</h2>
+          <p>Today and week overview with quick actions.</p>
+        </div>
+        <div class="toggle">
+          <button
+            class="toggle-btn"
+            type="button"
+            [class.active]="scheduleView === 'today'"
+            (click)="setScheduleView('today')"
+          >
+            Today
+          </button>
+          <button
+            class="toggle-btn"
+            type="button"
+            [class.active]="scheduleView === 'week'"
+            (click)="setScheduleView('week')"
+          >
+            Week
+          </button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <span class="filter-label">Filters:</span>
+        <button class="chip">Role</button>
+        <button class="chip">Employee</button>
+      </div>
+
+      <div class="schedule-grid" *ngIf="scheduleView === 'today'">
+      </div>
+
+      <div class="week-grid" *ngIf="scheduleView === 'week'">
+      </div>
+    </article>
+
+    <aside class="side-panel">
+      <article class="card">
+        <h3>Alerts & tasks</h3>
+      </article>
+
+      <article class="card">
+        <h3>Requests & approvals</h3>
+      </article>
+    </aside>
+  </section>
+
+  </div>
+</div>

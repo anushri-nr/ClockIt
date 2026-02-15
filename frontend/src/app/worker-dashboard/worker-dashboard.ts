@@ -96,101 +96,127 @@ interface Shift {
     </div>
   `,
   styles: [`
-    /* LAYOUT & STRUCTURE */
-    .dashboard-wrapper {
-      min-height: 100vh;
-      background-color: #f4f7f6; /* Matching Rahul's light background */
-    }
-
-    .content-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 30px 20px;
-    }
-
-    /* TOOLBAR STYLING */
-    .custom-toolbar {
-      background-color: #0f5f5c; /* Rahul's Primary Green */
-      color: white;
-      box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
-    }
+ 
+  .dashboard-wrapper {
+    min-height: 100vh;
+    padding-bottom: 40px; 
     
-    .brand {
-      font-weight: 700;
-      letter-spacing: 1px;
-      font-size: 1.2rem;
-    }
-
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.9rem;
-    }
-
-    .spacer { flex: 1 1 auto; }
-
-    /* WIDGET GRID (The "New Functionality") */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-
-    .stat-card {
-      padding: 15px;
-    }
-
-    /* Special styling for the "Next Shift" card */
-    .highlight-card {
-      background: linear-gradient(135deg, #0f5f5c 0%, #144e4b 100%);
-      color: white;
-    }
     
-    .highlight-card mat-card-subtitle { color: rgba(255,255,255, 0.7); }
-    .highlight-card mat-card-title { color: white; font-size: 1.5rem; margin-bottom: 10px; }
+    background: 
+      radial-gradient(circle at 10% 10%, rgba(254, 243, 230, 1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 0%, rgba(232, 246, 242, 1) 0%, transparent 45%),
+      linear-gradient(180deg, #f7f2ea 0%, #f1ebe1 100%);
+      
+    position: relative;
+    overflow-x: hidden;
+  }
+
+ 
+  .dashboard-wrapper::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(15, 95, 92, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+
+  mat-toolbar {
+    background: linear-gradient(135deg, #0f5f5c 0%, #144e4b 45%, #1f2d2d 100%);
+    color: white;
+    width: calc(100% - 40px);
+    max-width: 1200px;
+    margin: 20px auto 30px; 
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(15, 95, 92, 0.25);
+    position: sticky;
+    top: 20px; 
+    z-index: 100;
+  }
+  
+  .content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+ 
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    padding: 20px;
+    border-radius: 20px !important; 
     
-    .btn-inverse {
-      background: rgba(255,255,255,0.2);
-      color: white;
-    }
-
-    /* Standard Stat Cards */
-    .icon-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #666;
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .big-number {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin: 15px 0;
-      color: #1f2328;
-    }
-
-    .sub-text { color: #888; font-size: 0.9rem; }
     
-    .green-icon { color: #0f5f5c; }
-    .orange-icon { color: #f4a261; }
+    background-color: #fffdf9 !important; 
+    
+    
+    border: 1px solid rgba(15, 95, 92, 0.08);
+    box-shadow: 0 14px 30px rgba(31, 35, 40, 0.08) !important;
+  }
 
-    /* GRID SECTION */
-    h2 {
-      font-weight: 600;
-      color: #1f2328;
-      margin-bottom: 15px;
-    }
+ 
+  .highlight-card {
+    background: linear-gradient(135deg, #0f5f5c 0%, #144e4b 100%) !important;
+    color: white;
+    box-shadow: 0 14px 30px rgba(15, 95, 92, 0.25) !important;
+  }
+  
+  .highlight-card mat-card-title { color: white; font-size: 1.8rem; margin-bottom: 5px; }
+  .highlight-card mat-card-subtitle { color: rgba(255,255,255, 0.8); }
 
-    .grid-container {
-      padding: 0; 
-      overflow: hidden;
-    }
-  `]
+  
+  h2 {
+    font-weight: 700;
+    color: #1f2328;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .grid-container {
+    padding: 25px;
+    border-radius: 24px !important;
+    
+
+    background-color: #fffdf9 !important;
+    
+    border: 1px solid rgba(15, 95, 92, 0.08);
+    box-shadow: 0 14px 30px rgba(31, 35, 40, 0.08) !important;
+  }
+
+
+  .brand { font-weight: 700; letter-spacing: 1px; font-size: 1.1rem; }
+  .spacer { flex: 1 1 auto; }
+  
+  .big-number {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin: 10px 0;
+    color: #1f2328;
+  }
+  
+  .sub-text { color: #5a6472; font-size: 0.9rem; font-weight: 500; }
+  
+  .icon-header {
+    display: flex; align-items: center; gap: 8px;
+    color: #5a6472; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  button mat-icon { color: white; }
+`]
 })
 export class WorkerDashboardComponent {
   

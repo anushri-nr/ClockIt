@@ -53,7 +53,7 @@ import { MatToolbar, MatToolbarModule } from '@angular/material/toolbar';
     </div>
   `,
   styles: [`
-    /* Only layout styles remain. Colors come from styles.scss */
+
     .auth-card {
       width: 100%;
       max-width: 400px;
@@ -70,7 +70,7 @@ import { MatToolbar, MatToolbarModule } from '@angular/material/toolbar';
 
     mat-card-title {
       font-size: 2rem;
-      font-weight: 700; /* Bold like Rahul's headers */
+      font-weight: 700; 
       margin-bottom: 10px;
     }
 
@@ -88,11 +88,11 @@ import { MatToolbar, MatToolbarModule } from '@angular/material/toolbar';
   top: 0;
   left: 0;
   width: 100%;
-  background-color: #0f5f5c; /* Rahul's Green */
+  background-color: #0f5f5c; 
   color: white;
   box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
   padding: 0 24px;
-  box-sizing: border-box; /* Prevents scrollbar */
+  box-sizing: border-box; 
 }
 
 .brand {
