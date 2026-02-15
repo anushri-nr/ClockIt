@@ -40,6 +40,8 @@ func Init(path string) error {
 	if err := DB.AutoMigrate(
 		&models.Employee{},
 		&models.WorkerAvailability{},
+		&models.Shift{},
+		&models.ShiftAssignment{},
 	); err != nil {
 		return fmt.Errorf("auto-migrate failed: %v", err)
 	}

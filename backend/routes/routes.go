@@ -18,4 +18,10 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		workerRoutes.POST("/register", controllers.WorkerRegister)
 	}
+
+	shiftRoutes := r.Group("/api/shifts")
+	{
+		shiftRoutes.POST("/create", controllers.CreateShift)
+		shiftRoutes.POST("/assign", controllers.AssignWorkerToShift)
+	}
 }
