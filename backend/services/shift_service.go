@@ -76,6 +76,7 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 		EmployeeID: employeeID,
 		AssigneeID: assignedBy,
 		Status:     models.StatusAssigned,
+		AssignedAt: time.Now(),
 	}
 
 	if err := database.DB.Create(&assignment).Error; err != nil {

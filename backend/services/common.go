@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log"
 
+	"gorm.io/gorm"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,7 +24,7 @@ func RegisterEmployee(name, email, password, address, phone string, companyID ui
 	}
 
 	// If error is not "record not found", it's a database error
-	if err.Error() != "record not found" {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Printf("RegisterEmployee: database error while checking email: %v", err)
 		return nil, err
 	}

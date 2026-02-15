@@ -49,11 +49,11 @@ func SupervisorRegister(c *gin.Context) {
 
 	log.Printf("Supervisor registered successfully, id=%d", employee.ID)
 	c.JSON(http.StatusCreated, gin.H{
-		"id":        employee.ID,
-		"name":      employee.Name,
-		"email":     employee.Email,
-		"role":      employee.Role,
-		"companyID": employee.CompanyID,
+		"id":         employee.ID,
+		"name":       employee.Name,
+		"email":      employee.Email,
+		"role":       employee.Role,
+		"company_id": employee.CompanyID,
 	})
 }
 
