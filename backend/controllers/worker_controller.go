@@ -17,7 +17,7 @@ func WorkerRegister(c *gin.Context) {
 		Password  string  `json:"password" binding:"required,min=8,max=20"`
 		Address   string  `json:"address"`
 		PhoneNo   string  `json:"phone_no"`
-		CompanyID uint    `json:"company_id"`
+		CompanyID uint    `json:"company_id" binding:"required"`
 		Wage      float64 `json:"wage" binding:"gte=0"`
 	}
 
@@ -25,12 +25,6 @@ func WorkerRegister(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("WorkerRegister: binding error: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
-		return
-	}
-
-	if req.Wage < 0 {
-		log.Printf("WorkerRegister: negative wage: %f", req.Wage)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "wage must be non-negative"})
 		return
 	}
 
