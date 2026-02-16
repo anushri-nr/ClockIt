@@ -2,24 +2,18 @@ package main
 
 import (
 	"clockit/backend/database"
-	"fmt"
+	"clockit/backend/routes"
 	"log"
-	"net/http"
 	"os"
+
+	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintln(w, "OK")
-}
-
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", rootHandler)
-
 	// Determine database path from environment variable or use default
 	err := godotenv.Load()
 	if err != nil {
@@ -38,18 +32,19 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
+	r := gin.Default()
+	routes.RegisterRoutes(r) // Configure HTTP server with proper timeouts
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
-		// Set timeouts to avoid Slowloris attacks.
-		// Tune these values as needed.
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		Addr:              ":8080",
+		Handler:           r,
+		ReadTimeout:       10 * time.Second, // max time to read request body
+		ReadHeaderTimeout: 5 * time.Second,  // max time to read headers
+		WriteTimeout:      15 * time.Second, // max time to write response
+		IdleTimeout:       60 * time.Second, // max time for keep-alive connections
 	}
 
-	log.Printf("Starting server on %s", srv.Addr)
+	log.Println("Starting ClockIt server on :8080")
+
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed: %v", err)
 	}
