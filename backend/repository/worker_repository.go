@@ -32,3 +32,20 @@ func (r *WorkerRepository) FindAvailableWorkers(date time.Time, companyID uint) 
 
 	return availabilities, nil
 }
+
+// FindAssignmentsForWorker returns shift assignments for a given worker.
+func (r *WorkerRepository) FindAssignmentsForWorker(employeeID uint) ([]models.ShiftAssignment, error) {
+	var assignments []models.ShiftAssignment
+
+	if err := database.DB.Model(&models.ShiftAssignment{}).
+		Where("employee_id = ?", employeeID).
+		Preload("Shift").
+		Preload("Shift.Creator").
+		Preload("Assignee").
+		Find(&assignments).Error; err != nil {
+		log.Printf("FindAssignmentsForWorker: DB query error: %v", err)
+		return []models.ShiftAssignment{}, err
+	}
+
+	return assignments, nil
+}

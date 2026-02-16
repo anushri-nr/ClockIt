@@ -3,13 +3,16 @@ package controllers
 import (
 	"clockit/backend/repository"
 	"clockit/backend/services"
+	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"clockit/backend/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func SupervisorRegister(c *gin.Context) {
@@ -95,4 +98,33 @@ func GetWorkerAvailability(c *gin.Context) {
 
 	log.Printf("Found %d workers available", len(workers))
 	c.JSON(http.StatusOK, workers)
+}
+
+// GetShiftsCreatedBySupervisor returns shifts created by a supervisor (by path param employee_id)
+func GetShiftsCreatedBySupervisor(c *gin.Context) {
+	empParam := c.Param("employee_id")
+	if empParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "employee_id path parameter is required"})
+		return
+	}
+
+	empID64, err := strconv.ParseUint(empParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	shifts, err := svc.GetShiftsCreatedBySupervisor(uint(empID64))
+	if err != nil {
+		log.Printf("GetShiftsCreatedBySupervisor: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch shifts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shifts)
 }
