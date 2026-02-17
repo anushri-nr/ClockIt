@@ -7,11 +7,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
-import { AuthService } from '../services/auth';
+import { AuthService } from '../services/auth.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CompanyService, Company } from '../services/company.service';
 
 @Component({
   selector: 'app-register',
@@ -137,7 +138,7 @@ export class RegisterComponent implements OnInit {
     companyId: ''
   };
   
-  companies$!: Observable<any[]>; 
+  companies$!: Observable<Company[]>; 
   
   isSubmitting = false;
 
@@ -145,6 +146,7 @@ export class RegisterComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private authService: AuthService,
+    private companyService: CompanyService
   ) {}
 
   ngOnInit() {
@@ -153,7 +155,7 @@ export class RegisterComponent implements OnInit {
       this.user.role = roleFromUrl;
     }
 
-    this.companies$ = this.authService.getCompanies();
+    this.companies$ = this.companyService.getCompanies();
   }
 
   onSubmit() {

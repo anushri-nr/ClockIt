@@ -4,15 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { ShiftService } from '../services/shift';
-import { SupervisorService } from '../services/supervisor';
+import { ShiftService } from '../services/shift.service';
+import { SupervisorService } from '../services/supervisor.service';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule],
-  templateUrl: './supervisor-dashboard.html',
-  styleUrl: './supervisor-dashboard.scss'
+  templateUrl: './supervisor-dashboard.component.html',
+  styleUrl: './supervisor-dashboard.component.scss'
 })
 export class SupervisorDashboardComponent implements OnInit {
   

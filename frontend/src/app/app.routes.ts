@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
-import { LandingComponent } from './landing/landing';
-import { WorkerDashboardComponent } from './worker-dashboard/worker-dashboard';
-import { LoginComponent } from './login/login';
-import { RegisterComponent } from './register/register';
-import { SupervisorDashboardComponent } from './supervisor-dashboard/supervisor-dashboard';
+import { LandingComponent } from './landing/landing.component';
+import { WorkerDashboardComponent } from './worker-dashboard/worker-dashboard.component';
+import { LoginComponent } from './login/login.component';
+import { RegisterComponent } from './register/register.component';
+import { SupervisorDashboardComponent } from './supervisor-dashboard/supervisor-dashboard.component';
 
 export const routes: Routes = [
     { path:'', redirectTo:'/home', pathMatch: 'full' },
