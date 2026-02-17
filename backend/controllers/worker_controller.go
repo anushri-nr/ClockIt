@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"clockit/backend/models"
+	"clockit/backend/repository"
 	"clockit/backend/services"
+	"errors"
 	"log"
 	"net/http"
-
-	"clockit/backend/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func WorkerRegister(c *gin.Context) {
@@ -54,4 +57,40 @@ func WorkerRegister(c *gin.Context) {
 		"role":      employee.Role,
 		"companyID": employee.CompanyID,
 	})
+}
+
+// Query params for fetching assigned shifts
+// GetShiftsForWorker returns all shifts assigned to a worker
+func GetShiftsForWorker(c *gin.Context) {
+	// parse employee_id from path
+	empParam := c.Param("employee_id")
+	if empParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "employee_id path parameter is required"})
+		return
+	}
+
+	// convert empParam to uint
+	empID64, err := strconv.ParseUint(empParam, 10, 64)
+	if err != nil {
+		log.Printf("GetShiftsForWorker: invalid employee_id: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
+		return
+	}
+
+	svc := services.WorkerService{
+		Repo: &repository.WorkerRepository{},
+	}
+
+	resp, err := svc.GetAssignedShifts(uint(empID64))
+	if err != nil {
+		log.Printf("GetShiftsForWorker: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch assigned shifts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

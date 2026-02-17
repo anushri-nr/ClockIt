@@ -26,3 +26,13 @@ func CreateCompany(name, address string) (*models.Company, error) {
 	log.Printf("CreateCompany: company created, id=%d", company.ID)
 	return &company, nil
 }
+
+// ListCompanies returns all companies
+func ListCompanies() ([]models.Company, error) {
+	var companies []models.Company
+	if err := database.DB.Find(&companies).Error; err != nil {
+		log.Printf("ListCompanies: DB query failed: %v", err)
+		return []models.Company{}, err
+	}
+	return companies, nil
+}

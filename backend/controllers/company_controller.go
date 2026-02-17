@@ -37,3 +37,15 @@ func CreateCompany(c *gin.Context) {
 		"updated_at": company.UpdatedAt,
 	})
 }
+
+// ListCompanies returns all companies
+func ListCompanies(c *gin.Context) {
+	companies, err := services.ListCompanies()
+	if err != nil {
+		log.Printf("ListCompanies: failed to fetch companies: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch companies"})
+		return
+	}
+
+	c.JSON(http.StatusOK, companies)
+}
