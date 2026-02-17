@@ -1,0 +1,48 @@
+<div class="page-container flex-center">
+    <div class="page-container flex-center">
+  
+  <mat-toolbar class="auth-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+  </mat-toolbar>
+
+      <mat-card class="auth-card">
+      <div class="brand-logo">
+  <mat-icon class="logo-icon">schedule</mat-icon>
+</div>
+        <mat-card-header class="centered-header">
+          <mat-card-title>{{ currentRole | titlecase }} Login</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <form #loginForm="ngForm" (ngSubmit)="loginForm.valid && onSubmit()">
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" [(ngModel)]="email" name="email" required email>
+              <mat-error>Valid email is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" [(ngModel)]="password" name="password" required>
+              <mat-error>Password is required</mat-error>
+            </mat-form-field>
+
+            <div class="actions">
+              <button mat-flat-button color="primary" type="submit" 
+                      [disabled]="!loginForm.valid" class="full-width large-btn">
+                Sign In
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+
+        <mat-card-actions class="center-actions">
+           <span style="font-size: 14px; color: #666;">New here?</span>
+           <button mat-button color="accent" (click)="onRegister()">
+             Create Account
+           </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>

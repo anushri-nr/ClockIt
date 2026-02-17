@@ -1,0 +1,48 @@
+.auth-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .centered-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    mat-card-title {
+      font-size: 2rem;
+      font-weight: 700; 
+      margin-bottom: 10px;
+    }
+
+    mat-icon {
+      margin-right: 8px;
+    }
+    
+    .role-selection {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+      .auth-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: #0f5f5c; 
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 95, 92, 0.2);
+  padding: 0 24px;
+  box-sizing: border-box; 
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 1.2rem;
+}
+
+.spacer { flex: 1 1 auto; }

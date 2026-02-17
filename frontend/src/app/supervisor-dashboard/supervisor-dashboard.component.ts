@@ -15,11 +15,15 @@ import { SupervisorService } from '../services/supervisor.service';
   styleUrl: './supervisor-dashboard.component.scss'
 })
 export class SupervisorDashboardComponent implements OnInit {
-  
+
+  // --- HARDCODED TEST VALUES (Remove when Login is built) ---
+  currentSupervisorId = 1;
+  currentCompanyId = 1;
+
   // View State
   currentDateTime = '';
   scheduleView: 'today' | 'week' = 'today';
-  
+
   // Modal Flags
   isShiftModalOpen = false;
   isAnnouncementModalOpen = false;
@@ -39,19 +43,27 @@ export class SupervisorDashboardComponent implements OnInit {
   isLoadingWorkers = false;
 
   // Mock Data (Placeholder until 'Get Shifts' API is ready)
-  mockShifts = [
-    { id: 'shift-001', startTime: '2026-02-15T09:00', endTime: '2026-02-15T13:00', createdBy: 'Supervisor A', createdAt: '2026-02-15T08:30:00Z' },
-    { id: 'shift-002', startTime: '2026-02-15T14:00', endTime: '2026-02-15T18:00', createdBy: 'Supervisor B', createdAt: '2026-02-15T09:10:00Z' }
-  ];
+  shifts: any[] = [];
 
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.updateDateTime();
     this.createdAt = new Date().toISOString();
+    this.loadShifts();
+  }
+
+  loadShifts() {
+    this.supervisorService.getShifts(this.currentSupervisorId).subscribe({
+      next: (data) => {
+        console.log('Shifts Loaded:', data);
+        this.shifts = data;
+      },
+      error: (err) => console.error('Failed to load shifts', err)
+    });
   }
 
   // --- LOGIC ---
@@ -67,7 +79,7 @@ export class SupervisorDashboardComponent implements OnInit {
 
   submitCreateShift(): void {
     if (this.isSubmittingShift) return;
-    
+
     if (!this.createShift.startTime || !this.createShift.endTime || !this.createShift.createdBy) {
       alert('Please fill all fields before submitting.');
       return;
@@ -79,6 +91,7 @@ export class SupervisorDashboardComponent implements OnInit {
     this.shiftService.createShift(this.createShift).subscribe({
       next: () => {
         alert('Shift created successfully!');
+        this.loadShifts();
         this.isSubmittingShift = false;
         this.closeShiftModal();
         // Reset form
@@ -97,16 +110,24 @@ export class SupervisorDashboardComponent implements OnInit {
       alert('Please select a shift and a worker.');
       return;
     }
-    // TODO: Connect to POST /api/shifts/assign when ready
-    console.log(`Assigning worker ${this.selectedWorkerId} to shift ${this.selectedShiftId}`);
-    this.closeAssignWorkerModal();
-  }
 
-  private updateDateTime() {
-    const now = new Date();
-    this.currentDateTime = new Intl.DateTimeFormat('en-US', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    }).format(now);
+    // Convert strings to numbers for the API
+    const shiftIdNum = Number(this.selectedShiftId);
+    const workerIdNum = Number(this.selectedWorkerId);
+
+    this.supervisorService.assignWorker(shiftIdNum, workerIdNum).subscribe({
+      next: () => {
+        alert('Worker assigned successfully!');
+        this.closeAssignWorkerModal();
+        
+        // Refresh the grid to show the new assignment
+        this.loadShifts(); 
+      },
+      error: (err) => {
+        console.error('Assignment failed', err);
+        alert('Failed to assign worker.');
+      }
+    });
   }
 
   // --- MODAL CONTROLS ---
@@ -129,22 +150,24 @@ export class SupervisorDashboardComponent implements OnInit {
   }
 
   openAssignWorkerModal() {
-    this.resetModals();
-    this.isAssignWorkerModalOpen = true;
-    
-    // FETCH WORKERS ON OPEN
-    this.isLoadingWorkers = true;
-    this.supervisorService.getAvailableWorkers().subscribe({
-      next: (data) => {
-        this.availableWorkers = data;
-        this.isLoadingWorkers = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.isLoadingWorkers = false;
-      }
-    });
-  }
+  this.resetModals();
+  this.isAssignWorkerModalOpen = true;
+  this.isLoadingWorkers = true;
+
+  // Format date as YYYY-MM-DD for Go Backend
+  const today = new Date().toISOString().split('T')[0]; 
+
+  this.supervisorService.getAvailableWorkers(today, this.currentCompanyId).subscribe({
+    next: (data) => {
+      this.availableWorkers = data;
+      this.isLoadingWorkers = false;
+    },
+    error: (err) => {
+      console.error('Failed to load workers', err);
+      this.isLoadingWorkers = false;
+    }
+  });
+}
 
   closeAssignWorkerModal() {
     this.isAssignWorkerModalOpen = false;
@@ -153,14 +176,21 @@ export class SupervisorDashboardComponent implements OnInit {
   // Simple toggles
   openAnnouncementModal() { this.resetModals(); this.isAnnouncementModalOpen = true; }
   closeAnnouncementModal() { this.isAnnouncementModalOpen = false; }
-  
+
   openOpenShiftsModal() { this.resetModals(); this.isOpenShiftsModalOpen = true; }
   closeOpenShiftsModal() { this.isOpenShiftsModalOpen = false; }
-  
+
   openStatusSnapshot() { this.resetModals(); this.isStatusSnapshotOpen = true; }
   closeStatusSnapshot() { this.isStatusSnapshotOpen = false; }
 
   setScheduleView(view: 'today' | 'week') {
     this.scheduleView = view;
+  }
+
+  private updateDateTime() {
+    const now = new Date();
+    this.currentDateTime = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    }).format(now);
   }
 }

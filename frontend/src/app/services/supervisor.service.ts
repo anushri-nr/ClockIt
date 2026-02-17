@@ -1,6 +1,26 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of, delay } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+export interface Shift {
+  id: number;
+  shift_id: number;
+  start_time: string;
+  end_time: string;
+  assigned_to?: string; // Optional because it might be unassigned
+  status: string;
+}
+
+export interface Worker {
+  id: number;
+  name: string;
+  email: string;
+  phone_no: string;
+  start_time: string;
+  end_time: string;
+  company_id: number;
+  company_name: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -11,20 +31,33 @@ export class SupervisorService {
 
   constructor(private http: HttpClient) { }
 
-  // GET /api/supervisors/workers/availability
-  getAvailableWorkers(): Observable<any[]> {
-    // UNCOMMENT THIS WHEN BACKEND IS READY
-    // return this.http.get<any[]>(`${this.apiUrl}/workers/availability`);
+  // 1. GET MAIN GRID (Real API)
+  // Backend Route: GET /api/supervisors/:employee_id/shifts
+  getShifts(supervisorId: number): Observable<Shift[]> {
+    return this.http.get<Shift[]>(`${this.apiUrl}/${supervisorId}/shifts`);
+  }
 
-    // MOCK DATA (Matches the structure we expect)
-    const dummyWorkers = [
-      { id: 101, name: 'Ava N.', role: 'Front Desk' },
-      { id: 102, name: 'Malik J.', role: 'Stock' },
-      { id: 103, name: 'Nora K.', role: 'Cashier' },
-      { id: 104, name: 'Sam R.', role: 'Barista' }
-    ];
+  // 2. GET AVAILABLE WORKERS (Real API)
+  // Backend Route: GET /api/supervisors/workers/availability?date=YYYY-MM-DD&company_id=X
+  getAvailableWorkers(date: string, companyId: number): Observable<Worker[]> {
     
-    console.log('Fetching available workers...');
-    return of(dummyWorkers).pipe(delay(800)); 
+    // Setup Query Parameters
+    let params = new HttpParams()
+      .set('date', date)
+      .set('company_id', companyId.toString());
+
+    return this.http.get<Worker[]>(`${this.apiUrl}/workers/availability`, { params });
+  }
+
+  // 3. ASSIGN WORKER TO SHIFT
+  // Backend Route: POST /api/shifts/assign
+  assignWorker(shiftId: number, workerId: number): Observable<any> {
+    const payload = {
+      shift_id: shiftId,
+      worker_id: workerId
+    };
+    // Note: The route is actually under 'shifts', not 'supervisors'
+    // So we use a different base URL for this specific call
+    return this.http.post('http://localhost:8080/api/shifts/assign', payload);
   }
 }

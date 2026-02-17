@@ -1,5 +1,6 @@
-<div class="dashboard-root" [class.modal-open]="isShiftModalOpen || isAnnouncementModalOpen || isOpenShiftsModalOpen || isAssignWorkerModalOpen || isStatusSnapshotOpen">
-  
+<div class="dashboard-root"
+  [class.modal-open]="isShiftModalOpen || isAnnouncementModalOpen || isOpenShiftsModalOpen || isAssignWorkerModalOpen || isStatusSnapshotOpen">
+
   <section *ngIf="isShiftModalOpen" class="shift-modal open" aria-label="Create shift">
     <div class="modal-card">
       <div class="modal-header">
@@ -129,13 +130,13 @@
         <div class="panel">
           <h3>Shifts created</h3>
           <ul class="list compact">
-            <li *ngFor="let shift of mockShifts">
+            <li *ngFor="let shift of shifts">
               <div>
                 <div class="request-title">
-                  {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
                 </div>
                 <div class="request-sub">
-                  Created by {{ shift.createdBy }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
+                  Created by {{ shift.createdBy || 'Me' }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
                 </div>
               </div>
             </li>
@@ -148,23 +149,24 @@
             <span>Select shift</span>
             <select class="input" [(ngModel)]="selectedShiftId">
               <option value="">Choose a shift</option>
-              <option *ngFor="let shift of mockShifts" [value]="shift.id">
+              <option *ngFor="let shift of shifts" [value]="shift.id">
                 {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
               </option>
             </select>
           </label>
-          
+
           <label class="field">
             <span>Select worker</span>
-            
+
             <div *ngIf="isLoadingWorkers" style="padding: 10px; color: #5a6472; font-size: 0.9rem;">
               Loading workers...
             </div>
-            
+
             <select *ngIf="!isLoadingWorkers" class="input" [(ngModel)]="selectedWorkerId">
               <option value="">Choose a worker</option>
               <option *ngFor="let worker of availableWorkers" [value]="worker.id">
-                {{ worker.name }} ({{ worker.role }})
+                {{ worker.name }} ({{ worker.start_time | date:'shortTime' }} - {{ worker.end_time | date:'shortTime'
+                }})
               </option>
             </select>
           </label>
@@ -237,7 +239,7 @@
         </button>
       </div>
     </mat-toolbar>
-    
+
     <header class="hero">
       <div class="hero-text">
         <div class="eyebrow">Supervisor Dashboard</div>
@@ -276,10 +278,12 @@
             <p>Today and week overview with quick actions.</p>
           </div>
           <div class="toggle">
-            <button class="toggle-btn" type="button" [class.active]="scheduleView === 'today'" (click)="setScheduleView('today')">
+            <button class="toggle-btn" type="button" [class.active]="scheduleView === 'today'"
+              (click)="setScheduleView('today')">
               Today
             </button>
-            <button class="toggle-btn" type="button" [class.active]="scheduleView === 'week'" (click)="setScheduleView('week')">
+            <button class="toggle-btn" type="button" [class.active]="scheduleView === 'week'"
+              (click)="setScheduleView('week')">
               Week
             </button>
           </div>
@@ -292,9 +296,9 @@
         </div>
 
         <div class="schedule-grid" *ngIf="scheduleView === 'today'">
-          </div>
+        </div>
         <div class="week-grid" *ngIf="scheduleView === 'week'">
-          </div>
+        </div>
       </article>
 
       <aside class="side-panel">
