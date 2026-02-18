@@ -85,4 +85,3 @@ None identified at this stage. All tasks are progressing through normal review c
 - Authentication and Authorization
 - Expand worker availability tracking features
 - Implement additional shift management features
-- Performance optimization and testing
