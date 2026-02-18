@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef } from 'ag-grid-community';
@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
+import { Observable, tap } from 'rxjs';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -35,14 +36,14 @@ interface Shift {
   templateUrl: './worker-dashboard.component.html',
   styleUrls: ['./worker-dashboard.component.scss']
 })
-export class WorkerDashboardComponent {
+export class WorkerDashboardComponent implements OnInit{
 
   // --- HARDCODED WORKER ID (Remove when Login is built) ---
-  currentWorkerId = 2;
+  currentWorkerId = 3;
 
   currentDateTime = '';
 
-  myShifts: WorkerShift[] = [];
+  myShifts$!: Observable<WorkerShift[]>;
   nextShift: WorkerShift | null = null;
 
   totalHours = 0;
@@ -109,21 +110,25 @@ export class WorkerDashboardComponent {
   ngOnInit() {
     this.updateDateTime();
 
-    this.workerService.getMyShifts(this.currentWorkerId).subscribe({
-      next: (data) => {
-        console.log('Worker Shifts Loaded:', data);
-        this.myShifts = data;
-        this.calculateStats();
-        this.findNextShift();
-      },
-      error: (err) => console.error('Failed to load worker shifts', err)
-    });
+    // 2. Assign Observable with a 'tap' side-effect
+    // The 'tap' operator lets us run code (calculate stats) 
+    // without stopping the data from going to the HTML.
+    this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+      tap((data) => {
+        console.log("Stream received data:", data);
+        this.calculateStats(data);
+        this.findNextShift(data);
+      })
+    );
   }
 
-  calculateStats() {
+  calculateStats(shifts: WorkerShift[]) {
     this.totalHours = 0;
 
-    this.myShifts.forEach(shift => {
+    shifts.forEach(shift => {
+      // Safety check for missing times
+      if (!shift.start_time || !shift.end_time) return;
+
       const start = new Date(shift.start_time).getTime();
       const end = new Date(shift.end_time).getTime();
       const durationHours = (end - start) / (1000 * 60 * 60);
@@ -136,11 +141,14 @@ export class WorkerDashboardComponent {
     this.estEarnings = this.totalHours * this.hourlyWage;
   }
 
-  findNextShift() {
+  findNextShift(shifts: WorkerShift[]) {
     const now = new Date().getTime();
 
+    // safety check
+    if (!shifts) return;
+
     // Filter for future shifts and sort by start time
-    const futureShifts = this.myShifts
+    const futureShifts = shifts
       .filter(s => new Date(s.start_time).getTime() > now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 

@@ -22,7 +22,7 @@ export class ShiftService {
       end_time: new Date(shiftData.endTime).toISOString(),
       // We assume the backend handles "created_at" automatically
       // We might need to send the supervisor's ID if the backend requires it
-      created_by: shiftData.createdBy 
+      created_by: Number(shiftData.createdBy) 
     };
 
     console.log('Creating Shift Payload:', payload);

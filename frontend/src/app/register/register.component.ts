@@ -30,8 +30,8 @@ import { CompanyService, Company } from '../services/company.service';
     MatSelectModule,
     MatProgressSpinnerModule
   ],
-  templateUrl: './landing.component.html',
-  styleUrls: ['./landing.component.scss']
+  templateUrl: './register.component.html',
+  styleUrls: ['./register.component.scss']
 })
 export class RegisterComponent implements OnInit {
   user = {
@@ -68,16 +68,23 @@ export class RegisterComponent implements OnInit {
     if(this.isSubmitting) return;
     this.isSubmitting = true;
     
-    this.authService.register(this.user).subscribe((success) => {
-      this.isSubmitting = false;
-      if(success) {
-        if(this.user.role.toLowerCase() == "worker") {
-          this.router.navigate(['worker-dashboard']);
+    this.authService.register(this.user).subscribe({
+      next: (success) => {
+        this.isSubmitting = false;
+        if(success) {
+          if(this.user.role.toLowerCase() == "worker") {
+            this.router.navigate(['worker-dashboard']);
+          } else {
+            this.router.navigate(['supervisor-dashboard']);
+          }
         } else {
-          this.router.navigate(['supervisor-dashboard']);
+          alert("Registration failed. Please try again.");
         }
-      } else {
-        alert("Registration failed");
+      },
+      error: (err) => {
+        console.error(err);
+        this.isSubmitting = false;
+        alert("An error occurred during registration.");
       }
     });
   }

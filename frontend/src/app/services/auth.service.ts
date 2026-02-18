@@ -38,9 +38,9 @@ export class AuthService {
       ? `${this.apiUrl}/supervisors/register`
       : `${this.apiUrl}/workers/register`;
 
-    // return this.http.post(endpoint, backendPayload);
+    return this.http.post(endpoint, backendPayload);
 
-    return of(true).pipe(delay(1000));
+    // return of(true).pipe(delay(1000));
   }
 
   getCompanies(): Observable<any[]> {

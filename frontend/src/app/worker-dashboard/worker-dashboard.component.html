@@ -64,14 +64,16 @@
     <div class="grid-section">
       <h2>My Schedule</h2>
       <mat-card class="grid-container">
+        
         <ag-grid-angular
           class="ag-theme-quartz"
           style="height: 400px; width: 100%;"
-          [rowData]="myShifts" 
+          [rowData]="myShifts$ | async" 
           [columnDefs]="colDefs"
           [pagination]="true"
           [paginationPageSize]="10">
         </ag-grid-angular>
+        
       </mat-card>
     </div>
 

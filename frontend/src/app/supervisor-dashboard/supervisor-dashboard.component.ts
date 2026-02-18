@@ -32,7 +32,7 @@ export class SupervisorDashboardComponent implements OnInit {
   isStatusSnapshotOpen = false;
 
   // Create Shift Data
-  createShift = { startTime: '', endTime: '', createdBy: '' };
+  createShift = { startTime: '', endTime: '', createdBy: this.currentSupervisorId.toString() };
   createdAt = '';
   isSubmittingShift = false;
 
@@ -80,8 +80,10 @@ export class SupervisorDashboardComponent implements OnInit {
   submitCreateShift(): void {
     if (this.isSubmittingShift) return;
 
-    if (!this.createShift.startTime || !this.createShift.endTime || !this.createShift.createdBy) {
-      alert('Please fill all fields before submitting.');
+    this.createShift.createdBy = this.currentSupervisorId.toString();
+
+    if (!this.createShift.startTime || !this.createShift.endTime) {
+      alert('Please fill start time and end times.');
       return;
     }
 
@@ -95,7 +97,7 @@ export class SupervisorDashboardComponent implements OnInit {
         this.isSubmittingShift = false;
         this.closeShiftModal();
         // Reset form
-        this.createShift = { startTime: '', endTime: '', createdBy: '' };
+        this.createShift = { startTime: '', endTime: '', createdBy: this.currentSupervisorId.toString() };
       },
       error: (err) => {
         console.error(err);
@@ -130,6 +132,40 @@ export class SupervisorDashboardComponent implements OnInit {
     });
   }
 
+  onShiftSelected() {
+    // 1. Reset current worker list
+    this.availableWorkers = [];
+    this.selectedWorkerId = '';
+
+    if(!this.selectedShiftId) return;
+
+    // 2. Find the full shift object to get its date
+    // We cast to 'any' to avoid type errors with snake_case
+    const shift: any = this.shifts.find((s: any) => s.id == this.selectedShiftId);
+
+    if(shift) {
+      this.isLoadingWorkers = true;
+
+      // 3. Extract the date (YYYY-MM-DD) from the shift's start time
+      // Example: "2026-02-18T09:00:00Z" -> "2026-02-18"
+      const dateStr = shift.start_time.split('T')[0];
+
+      // 4. service to get workers for THAT date
+      this.supervisorService.getAvailableWorkers(dateStr, this.currentCompanyId).subscribe({
+        next: (data) => {
+          this.availableWorkers = data;
+          this.isLoadingWorkers = false;
+          console.log(`Loaded ${data.length} workers for date: ${dateStr}`);
+        },
+        error: (err) => {
+          console.error('Failed to load workers for selected shift', err);
+          this.isLoadingWorkers = false;
+        }
+      });
+    }
+
+  }
+
   // --- MODAL CONTROLS ---
 
   private resetModals() {
@@ -152,21 +188,10 @@ export class SupervisorDashboardComponent implements OnInit {
   openAssignWorkerModal() {
   this.resetModals();
   this.isAssignWorkerModalOpen = true;
-  this.isLoadingWorkers = true;
-
-  // Format date as YYYY-MM-DD for Go Backend
-  const today = new Date().toISOString().split('T')[0]; 
-
-  this.supervisorService.getAvailableWorkers(today, this.currentCompanyId).subscribe({
-    next: (data) => {
-      this.availableWorkers = data;
-      this.isLoadingWorkers = false;
-    },
-    error: (err) => {
-      console.error('Failed to load workers', err);
-      this.isLoadingWorkers = false;
-    }
-  });
+  
+  this.selectedShiftId = '';
+  this.selectedWorkerId = '';
+  this.availableWorkers = [];
 }
 
   closeAssignWorkerModal() {

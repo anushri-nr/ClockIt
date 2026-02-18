@@ -30,7 +30,7 @@
               <input class="input" type="datetime-local" [(ngModel)]="createShift.endTime" />
             </label>
           </div>
-          <div class="field-row">
+          <!-- <div class="field-row">
             <label class="field">
               <span>Created by</span>
               <input class="input" type="text" placeholder="Supervisor name" [(ngModel)]="createShift.createdBy" />
@@ -43,7 +43,7 @@
               <span>Total hours</span>
               <input class="input read-only" type="text" [value]="totalHours" readonly />
             </label>
-          </div>
+          </div> -->
         </div>
       </div>
 
@@ -135,9 +135,9 @@
                 <div class="request-title">
                   {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
                 </div>
-                <div class="request-sub">
+                <!-- <div class="request-sub">
                   Created by {{ shift.createdBy || 'Me' }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
-                </div>
+                </div> -->
               </div>
             </li>
           </ul>
@@ -147,10 +147,10 @@
           <h3>Assignment</h3>
           <label class="field">
             <span>Select shift</span>
-            <select class="input" [(ngModel)]="selectedShiftId">
+            <select class="input" [(ngModel)]="selectedShiftId" (change)="onShiftSelected()">
               <option value="">Choose a shift</option>
               <option *ngFor="let shift of shifts" [value]="shift.id">
-                {{ shift.startTime | date:'MMM d, y, h:mm a' }} → {{ shift.endTime | date:'h:mm a' }}
+                {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
               </option>
             </select>
           </label>
