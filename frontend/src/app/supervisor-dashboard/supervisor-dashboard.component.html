@@ -18,6 +18,10 @@
       </div>
 
       <div class="modal-grid">
+        <div *ngIf="createShiftError" style="background: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+          {{ createShiftError }}
+        </div>
+
         <div class="panel">
           <h3>Shift details</h3>
           <div class="field-row">
@@ -30,27 +34,13 @@
               <input class="input" type="datetime-local" [(ngModel)]="createShift.endTime" />
             </label>
           </div>
-          <!-- <div class="field-row">
-            <label class="field">
-              <span>Created by</span>
-              <input class="input" type="text" placeholder="Supervisor name" [(ngModel)]="createShift.createdBy" />
-            </label>
-            <label class="field">
-              <span>Created at</span>
-              <input class="input read-only" type="text" [value]="createdAt" readonly />
-            </label>
-            <label class="field">
-              <span>Total hours</span>
-              <input class="input read-only" type="text" [value]="totalHours" readonly />
-            </label>
-          </div> -->
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn ghost dark" type="button" (click)="closeShiftModal()">Cancel</button>
         <button class="btn primary" type="button" (click)="submitCreateShift()" [disabled]="isSubmittingShift">
-          Submit
+          {{ isSubmittingShift ? 'Saving...' : 'Submit' }}
         </button>
       </div>
     </div>
@@ -127,6 +117,10 @@
       </div>
 
       <div class="modal-grid">
+        <div *ngIf="assignShiftError" style="background: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+          {{ assignShiftError }}
+        </div>
+
         <div class="panel">
           <h3>Shifts created</h3>
           <ul class="list compact">
@@ -135,9 +129,6 @@
                 <div class="request-title">
                   {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
                 </div>
-                <!-- <div class="request-sub">
-                  Created by {{ shift.createdBy || 'Me' }} · {{ shift.createdAt | date:'MMM d, y, h:mm a' }}
-                </div> -->
               </div>
             </li>
           </ul>
@@ -165,8 +156,7 @@
             <select *ngIf="!isLoadingWorkers" class="input" [(ngModel)]="selectedWorkerId">
               <option value="">Choose a worker</option>
               <option *ngFor="let worker of availableWorkers" [value]="worker.id">
-                {{ worker.name }} ({{ worker.start_time | date:'shortTime' }} - {{ worker.end_time | date:'shortTime'
-                }})
+                {{ worker.name }} ({{ worker.start_time }} - {{ worker.end_time }})
               </option>
             </select>
           </label>
@@ -233,7 +223,7 @@
       <span class="brand">ClockIt</span>
       <span class="spacer"></span>
       <div class="user-profile">
-        <span>Hello, Rahul</span>
+        <span>Hello, {{ currentSupervisorName }}</span>
         <button mat-icon-button type="button">
           <mat-icon>account_circle</mat-icon>
         </button>
@@ -296,7 +286,7 @@
         </div>
 
         <div class="schedule-grid" *ngIf="scheduleView === 'today'">
-        </div>
+          </div>
         <div class="week-grid" *ngIf="scheduleView === 'week'">
         </div>
       </article>

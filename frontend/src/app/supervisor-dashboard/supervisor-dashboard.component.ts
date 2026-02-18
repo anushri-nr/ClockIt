@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -19,6 +19,7 @@ export class SupervisorDashboardComponent implements OnInit {
   // --- HARDCODED TEST VALUES (Remove when Login is built) ---
   currentSupervisorId = 1;
   currentCompanyId = 1;
+  currentSupervisorName = 'Supervisor1';
 
   // View State
   currentDateTime = '';
@@ -36,6 +37,10 @@ export class SupervisorDashboardComponent implements OnInit {
   createdAt = '';
   isSubmittingShift = false;
 
+  // NEW: Error Messages
+  createShiftError = '';
+  assignShiftError = '';
+
   // Assign Worker Data
   selectedShiftId = '';
   selectedWorkerId = '';
@@ -47,7 +52,8 @@ export class SupervisorDashboardComponent implements OnInit {
 
   constructor(
     private shiftService: ShiftService,
-    private supervisorService: SupervisorService
+    private supervisorService: SupervisorService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -79,6 +85,9 @@ export class SupervisorDashboardComponent implements OnInit {
 
   submitCreateShift(): void {
     if (this.isSubmittingShift) return;
+    
+    // Reset Error
+    this.createShiftError = '';
 
     this.createShift.createdBy = this.currentSupervisorId.toString();
 
@@ -87,27 +96,43 @@ export class SupervisorDashboardComponent implements OnInit {
       return;
     }
 
+    // Validate End Time > Start Time
+    const start = new Date(this.createShift.startTime).getTime();
+    const end = new Date(this.createShift.endTime).getTime();
+
+    if (end <= start) {
+      this.createShiftError = 'End time must be after start time.';
+      return;
+    }
+
     this.isSubmittingShift = true;
 
     // Use the Service, not direct HTTP
     this.shiftService.createShift(this.createShift).subscribe({
       next: () => {
-        alert('Shift created successfully!');
-        this.loadShifts();
+        console.log("Shift created successfully");
+
         this.isSubmittingShift = false;
         this.closeShiftModal();
+
+        this.cdr.detectChanges();
+        
         // Reset form
         this.createShift = { startTime: '', endTime: '', createdBy: this.currentSupervisorId.toString() };
+        this.loadShifts();
       },
       error: (err) => {
         console.error(err);
         this.isSubmittingShift = false;
-        alert('Failed to create shift.');
+        this.createShiftError = 'Failed to create shift. Please try again.';
+        this.cdr.detectChanges();
       }
     });
   }
 
   assignWorkerToShift(): void {
+    this.assignShiftError = '';
+
     if (!this.selectedShiftId || !this.selectedWorkerId) {
       alert('Please select a shift and a worker.');
       return;
@@ -117,17 +142,21 @@ export class SupervisorDashboardComponent implements OnInit {
     const shiftIdNum = Number(this.selectedShiftId);
     const workerIdNum = Number(this.selectedWorkerId);
 
-    this.supervisorService.assignWorker(shiftIdNum, workerIdNum).subscribe({
+    this.supervisorService.assignWorker(shiftIdNum, workerIdNum, this.currentSupervisorId).subscribe({
       next: () => {
-        alert('Worker assigned successfully!');
+        console.log("Worker assigned successfully");
+
         this.closeAssignWorkerModal();
+
+        this.cdr.detectChanges();
         
         // Refresh the grid to show the new assignment
         this.loadShifts(); 
       },
       error: (err) => {
         console.error('Assignment failed', err);
-        alert('Failed to assign worker.');
+        this.assignShiftError = 'Failed to assign worker. Please try again.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -136,6 +165,7 @@ export class SupervisorDashboardComponent implements OnInit {
     // 1. Reset current worker list
     this.availableWorkers = [];
     this.selectedWorkerId = '';
+    this.assignShiftError = ''; // Clear errors on selection change
 
     if(!this.selectedShiftId) return;
 
@@ -174,6 +204,8 @@ export class SupervisorDashboardComponent implements OnInit {
     this.isOpenShiftsModalOpen = false;
     this.isAssignWorkerModalOpen = false;
     this.isStatusSnapshotOpen = false;
+    this.createShiftError = '';
+    this.assignShiftError = '';
   }
 
   openShiftModal() {

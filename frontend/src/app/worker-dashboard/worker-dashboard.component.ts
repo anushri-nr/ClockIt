@@ -40,6 +40,7 @@ export class WorkerDashboardComponent implements OnInit{
 
   // --- HARDCODED WORKER ID (Remove when Login is built) ---
   currentWorkerId = 3;
+  currentWorkerName = 'Worker3';
 
   currentDateTime = '';
 

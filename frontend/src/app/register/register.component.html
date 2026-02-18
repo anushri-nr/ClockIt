@@ -43,10 +43,10 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Password</mat-label>
-            <input matInput type="password" [(ngModel)]="user.password" name="password" required minlength="6"
+            <input matInput type="password" [(ngModel)]="user.password" name="password" required minlength="8" maxlength="20"
               #passwordInput="ngModel">
             <mat-error *ngIf="passwordInput.errors?.['minlength']">
-              Password must be at least 6 characters
+              Password must be at least 8 characters
             </mat-error>
             <mat-error *ngIf="passwordInput.errors?.['required']">
               Password is required
