@@ -10,3 +10,7 @@ Varshith Reddy Onteddu
 Avantika Holla Sathyanarayana
 
 Anushri Neramballi Raghavendra
+
+## ER Diagram
+
+![alt text](<ER Diagram.png>)

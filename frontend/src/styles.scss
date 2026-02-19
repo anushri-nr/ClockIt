@@ -1,0 +1,73 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+
+:root {
+  --primary-color: #0f5f5c; 
+  --accent-color: #f4a261; 
+  --bg-color: #f4f7f6;      
+  --text-dark: #1f2328;
+  --card-bg: #ffffff;
+}
+
+html, body { 
+  height: 100%; 
+  margin: 0; 
+  font-family: 'Space Grotesk', sans-serif; 
+  background-color: var(--bg-color);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+
+.page-container {
+  min-height: 100vh;
+  padding: 20px;
+  
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(254, 243, 230, 1) 0%, transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(232, 246, 242, 1) 0%, transparent 45%),
+    linear-gradient(180deg, #f7f2ea 0%, #f1ebe1 100%);
+}
+
+
+mat-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important; 
+  border: 1px solid rgba(0,0,0,0.05);
+  background: var(--card-bg);
+}
+
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.brand-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo-icon {
+  font-size: 48px;     
+  height: 48px;       
+  width: 48px;         
+  color: #0f5f5c;      
+  background: #d7efe9; 
+  padding: 15px;
+  border-radius: 50%;  
+}

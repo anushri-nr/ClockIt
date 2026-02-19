@@ -1,0 +1,31 @@
+<div class="page-container flex-center">
+    <div class="page-container flex-center">
+  
+  <mat-toolbar class="auth-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+  </mat-toolbar>
+      
+      <mat-card class="auth-card">
+      <div class="brand-logo">
+  <mat-icon class="logo-icon">schedule</mat-icon>
+</div>
+        <mat-card-header class="centered-header">
+          <mat-card-title>Welcome to ClockIt</mat-card-title>
+          <mat-card-subtitle>Select your portal to continue</mat-card-subtitle>
+        </mat-card-header>
+        
+        <mat-card-content class="content-center">
+          <div class="role-selection">
+            <mat-button-toggle-group #group="matButtonToggleGroup" vertical="false">
+              <mat-button-toggle (click)="onRoleSelect('supervisor')" value="Supervisor">
+                <mat-icon>admin_panel_settings</mat-icon> Supervisor
+              </mat-button-toggle>
+              <mat-button-toggle (click)="onRoleSelect('worker')" value="Worker">
+                <mat-icon>engineering</mat-icon> Worker
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
