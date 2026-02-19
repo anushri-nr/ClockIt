@@ -1,0 +1,81 @@
+<div class="dashboard-wrapper">
+  
+  <mat-toolbar class="custom-toolbar">
+    <span class="brand">ClockIt</span>
+    <span class="spacer"></span>
+    <div class="user-profile">
+      <span>Hello, {{ currentWorkerName }}</span>
+      <button mat-icon-button>
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    </div>
+  </mat-toolbar>
+
+  <div class="content-container">
+    
+    <div class="stats-grid">
+      <mat-card class="stat-card highlight-card">
+        <ng-container *ngIf="nextShift; else noShift">
+          <mat-card-header>
+            <mat-card-subtitle>Next Shift</mat-card-subtitle>
+            <mat-card-title>
+              {{ nextShift.start_time | date:'EEEE, h:mm a' }}
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Main Store • {{ nextShift.start_time | date:'MMM d' }}</p>
+          </mat-card-content>
+        </ng-container>
+        
+        <ng-template #noShift>
+          <mat-card-header>
+            <mat-card-subtitle>Next Shift</mat-card-subtitle>
+            <mat-card-title>No upcoming shifts</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>Check back later for assignments.</p>
+          </mat-card-content>
+        </ng-template>
+
+        <mat-card-actions>
+          <button mat-button class="btn-inverse">View Details</button>
+        </mat-card-actions>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <div class="icon-header">
+          <mat-icon class="green-icon">schedule</mat-icon>
+          <span>Weekly Hours</span>
+        </div>
+        <div class="big-number">{{ totalHours | number:'1.1-1' }}</div>
+        <div class="sub-text">Target: 40 hrs</div>
+      </mat-card>
+
+      <mat-card class="stat-card">
+         <div class="icon-header">
+          <mat-icon class="orange-icon">payments</mat-icon>
+          <span>Est. Earnings</span>
+        </div>
+        <div class="big-number">{{ estEarnings | currency }}</div>
+        <div class="sub-text">Pending Approval</div>
+      </mat-card>
+    </div>
+
+    <div class="grid-section">
+      <h2>My Schedule</h2>
+      <mat-card class="grid-container">
+        
+        <ag-grid-angular
+          class="ag-theme-quartz"
+          style="height: 400px; width: 100%;"
+          [rowData]="myShifts$ | async" 
+          [columnDefs]="colDefs"
+          [pagination]="true"
+          [paginationPageSize]="10">
+        </ag-grid-angular>
+        
+      </mat-card>
+    </div>
+
+  </div>
+</div>
