@@ -80,7 +80,11 @@ func SupervisorLogin(c *gin.Context) {
 	var sup models.Employee
 	if err := services.FindEmployeeByEmailAndRole(req.Email, models.RoleSupervisor, &sup); err != nil {
 		log.Printf("SupervisorLogin: lookup failed: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+ 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+ 		} else {
+ 			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+ 		}
 		return
 	}
 

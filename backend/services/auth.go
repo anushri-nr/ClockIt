@@ -1,16 +1,16 @@
 package services
 
 import (
-	"log"
+	"errors"
 	"net/http"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/joho/godotenv"
+	"clockit/backend/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var jwtSecret []byte
@@ -19,22 +19,23 @@ var jwtExpiry = time.Hour * 24
 const ContextEmployeeID = "employee_id"
 const ContextEmployeeRole = "employee_role"
 
-func init() {
-	// try to load .env
-	if err := godotenv.Load(); err != nil {
-		log.Printf("auth init: could not load .env: %v", err)
-	}
+var ErrAuthNotInitialized = errors.New("auth not initialized; call services.InitAuth(secret) before using auth functions")
 
-	s := os.Getenv("SECRET_KEY")
-	if s == "" {
-		// fail fast — require a secret key to be configured
-		log.Fatalf("SECRET_KEY environment variable is not set.")
+// InitAuth initializes package-level auth state
+func InitAuth(secret string) error {
+	if secret == "" {
+		return ErrAuthNotInitialized
 	}
-	jwtSecret = []byte(s)
+	jwtSecret = []byte(secret)
+	return nil
 }
 
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if jwtSecret == nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "auth not initialized"})
+			return
+		}
 		auth := c.GetHeader("Authorization")
 		if auth == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing Authorization header"})
@@ -60,6 +61,42 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+// SupervisorAuthorizationMiddleware ensures the caller is a supervisor and if the route
+// contains :employee_id, that it matches the authenticated employee ID.
+func SupervisorAuthorizationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// role check
+		r, ok := c.Get(ContextEmployeeRole)
+		rs, _ := r.(string)
+		if !ok || rs != string(models.RoleSupervisor) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: supervisor access required"})
+			return
+		}
+
+		// optional path param check
+		pid := c.Param("employee_id")
+		if pid != "" {
+			p64, err := strconv.ParseUint(pid, 10, 64)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
+				return
+			}
+			authIDVal, ok := c.Get(ContextEmployeeID)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "missing authenticated employee id"})
+				return
+			}
+			authID, _ := authIDVal.(uint)
+			if uint(p64) != authID {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: cannot access shifts for this employee_id"})
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
 type JWTClaims struct {
 	EmployeeID uint   `json:"employee_id"`
 	Role       string `json:"role"`
@@ -68,6 +105,10 @@ type JWTClaims struct {
 
 // GenerateToken creates a signed JWT for the given employee id and role
 func GenerateToken(employeeID uint, role string) (string, error) {
+	if jwtSecret == nil {
+		return "", ErrAuthNotInitialized
+	}
+
 	claims := JWTClaims{
 		EmployeeID: employeeID,
 		Role:       role,
@@ -83,7 +124,15 @@ func GenerateToken(employeeID uint, role string) (string, error) {
 
 // ParseToken validates the token string and returns the claims
 func ParseToken(tokenStr string) (*JWTClaims, error) {
+	if jwtSecret == nil {
+		return nil, ErrAuthNotInitialized
+	}
+
 	token, err := jwt.ParseWithClaims(tokenStr, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Ensure that only HS256-signed tokens are accepted
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, jwt.ErrTokenSignatureInvalid
+		}
 		return jwtSecret, nil
 	})
 	if err != nil {
