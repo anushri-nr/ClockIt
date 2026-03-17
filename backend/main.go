@@ -3,6 +3,7 @@ package main
 import (
 	"clockit/backend/database"
 	"clockit/backend/routes"
+	"clockit/backend/services"
 	"log"
 	"os"
 
@@ -30,6 +31,15 @@ func main() {
 	// Connect to the database using GORM
 	if err := database.Init(dbPath); err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
+	}
+
+	// Initialize auth (read SECRET_KEY from environment)
+	secret := os.Getenv("SECRET_KEY")
+	if secret == "" {
+		log.Fatalf("SECRET_KEY environment variable is not set")
+	}
+	if err := services.InitAuth(secret); err != nil {
+		log.Fatalf("failed to initialize auth: %v", err)
 	}
 
 	r := gin.Default()

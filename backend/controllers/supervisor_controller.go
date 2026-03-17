@@ -12,6 +12,7 @@ import (
 	"clockit/backend/models"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -58,6 +59,59 @@ func SupervisorRegister(c *gin.Context) {
 		"email":      employee.Email,
 		"role":       employee.Role,
 		"company_id": employee.CompanyID,
+	})
+}
+
+// SupervisorLogin authenticates a supervisor and returns a JWT token
+func SupervisorLogin(c *gin.Context) {
+	type Req struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("SupervisorLogin: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		return
+	}
+
+	// find supervisor by email
+	var sup models.Employee
+	if err := services.FindEmployeeByEmailAndRole(req.Email, models.RoleSupervisor, &sup); err != nil {
+		log.Printf("SupervisorLogin: lookup failed: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+ 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+ 		} else {
+ 			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+ 		}
+		return
+	}
+
+	// check password
+	if err := bcrypt.CompareHashAndPassword([]byte(sup.Password), []byte(req.Password)); err != nil {
+		log.Printf("SupervisorLogin: password mismatch for email=%s: %v", req.Email, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	// generate JWT
+	token, err := services.GenerateToken(sup.ID, string(sup.Role))
+	if err != nil {
+		log.Printf("SupervisorLogin: token generation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"employee": gin.H{
+			"id":         sup.ID,
+			"name":       sup.Name,
+			"email":      sup.Email,
+			"role":       sup.Role,
+			"company_id": sup.CompanyID,
+		},
 	})
 }
 

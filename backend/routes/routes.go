@@ -2,6 +2,7 @@ package routes
 
 import (
 	"clockit/backend/controllers"
+	"clockit/backend/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,8 +12,10 @@ func RegisterRoutes(r *gin.Engine) {
 	supervisorRoutes := r.Group("/api/supervisors")
 	{
 		supervisorRoutes.POST("/register", controllers.SupervisorRegister)
-		supervisorRoutes.GET("/workers/availability", controllers.GetWorkerAvailability)
-		supervisorRoutes.GET("/:employee_id/shifts", controllers.GetShiftsCreatedBySupervisor)
+		supervisorRoutes.POST("/login", controllers.SupervisorLogin)
+		// protected endpoints - require authentication and supervisor role
+		supervisorRoutes.GET("/workers/availability", services.JWTAuthMiddleware(), services.SupervisorAuthorizationMiddleware(), controllers.GetWorkerAvailability)
+		supervisorRoutes.GET("/:employee_id/shifts", services.JWTAuthMiddleware(), services.SupervisorAuthorizationMiddleware(), controllers.GetShiftsCreatedBySupervisor)
 	}
 
 	workerRoutes := r.Group("/api/workers")
