@@ -74,3 +74,11 @@ func RegisterEmployee(name, email, password, address, phone string, companyID ui
 	log.Printf("RegisterEmployee: employee created, id=%d", employee.ID)
 	return &employee, nil
 }
+
+// FindEmployeeByEmailAndRole fetches an employee matching email and role
+func FindEmployeeByEmailAndRole(email string, role models.EmployeeRole, dst *models.Employee) error {
+	if err := database.DB.Where("email = ? AND role = ?", email, role).First(dst).Error; err != nil {
+		return err
+	}
+	return nil
+}
