@@ -46,10 +46,17 @@ export class WorkerDashboardComponent implements OnInit{
 
   myShifts$!: Observable<WorkerShift[]>;
   nextShift: WorkerShift | null = null;
+  assignedShifts: WorkerShift[] = [];
 
   totalHours = 0;
   estEarnings = 0;
   hourlyWage = 15;
+  weeklyTarget = 40;
+  dailyTarget = 8;
+  weeklyTotal = 0;
+  weeklyProgress = 0;
+  weekRangeLabel = '';
+  weeklyDays: Array<{ label: string; date: Date; hours: number; percent: number }> = [];
 
   constructor(private workerService: WorkerService) { }
 
@@ -119,6 +126,8 @@ export class WorkerDashboardComponent implements OnInit{
         console.log("Stream received data:", data);
         this.calculateStats(data);
         this.findNextShift(data);
+        this.assignedShifts = this.getAssignedShifts(data);
+        this.calculateWeeklyAssigned(data);
       })
     );
   }
@@ -148,12 +157,73 @@ export class WorkerDashboardComponent implements OnInit{
     // safety check
     if (!shifts) return;
 
-    // Filter for future shifts and sort by start time
-    const futureShifts = shifts
+    const assignedShifts = this.getAssignedShifts(shifts);
+
+    // Filter for future assigned shifts and sort by start time
+    const futureShifts = assignedShifts
       .filter(s => new Date(s.start_time).getTime() > now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
     this.nextShift = futureShifts.length > 0 ? futureShifts[0] : null;
+  }
+
+  private getAssignedShifts(shifts: WorkerShift[]) {
+    if (!shifts) return [];
+    return shifts.filter(shift => shift.status?.toLowerCase() === 'assigned');
+  }
+
+  calculateWeeklyAssigned(shifts: WorkerShift[]) {
+    const now = new Date();
+    const startOfWeek = this.getStartOfWeek(now);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    this.weekRangeLabel = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    this.weeklyDays = dayLabels.map((label, index) => {
+      const dayDate = new Date(startOfWeek);
+      dayDate.setDate(startOfWeek.getDate() + index);
+      return { label, date: dayDate, hours: 0, percent: 0 };
+    });
+
+    this.weeklyTotal = 0;
+
+    shifts.forEach(shift => {
+      if (!shift.start_time || !shift.end_time) return;
+
+      const status = shift.status?.toLowerCase();
+      if (status && status !== 'assigned' && status !== 'completed') return;
+
+      const start = new Date(shift.start_time);
+      const end = new Date(shift.end_time);
+
+      if (start < startOfWeek || start > endOfWeek) return;
+
+      const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      if (durationHours <= 0) return;
+
+      const dayIndex = (start.getDay() + 6) % 7;
+      this.weeklyDays[dayIndex].hours += durationHours;
+      this.weeklyTotal += durationHours;
+    });
+
+    this.weeklyDays = this.weeklyDays.map(day => ({
+      ...day,
+      percent: Math.min(100, (day.hours / this.dailyTarget) * 100)
+    }));
+
+    this.weeklyProgress = Math.min(100, (this.weeklyTotal / this.weeklyTarget) * 100);
+  }
+
+  private getStartOfWeek(date: Date) {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = (day + 6) % 7;
+    start.setDate(start.getDate() - diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
   }
 
   private updateDateTime() {
