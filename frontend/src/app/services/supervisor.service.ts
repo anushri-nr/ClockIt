@@ -31,10 +31,17 @@ export class SupervisorService {
 
   constructor(private http: HttpClient) { }
 
-  // 1. GET MAIN GRID (Real API)
-  // Backend Route: GET /api/supervisors/:employee_id/shifts
-  getShifts(supervisorId: number): Observable<Shift[]> {
-    return this.http.get<Shift[]>(`${this.apiUrl}/${supervisorId}/shifts`);
+  // 1. GET SHIFTS (Real API - Updated with Status Filter)
+  // Backend Route: GET /api/supervisors/:employee_id/shifts?status=XYZ
+  getShifts(supervisorId: number, status?: string): Observable<Shift[]> {
+    let params = new HttpParams();
+    
+    // If a status was passed in (e.g., 'Unassigned' or 'Requested'), add it to the query string
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    return this.http.get<Shift[]>(`${this.apiUrl}/${supervisorId}/shifts`, { params });
   }
 
   // 2. GET AVAILABLE WORKERS (Real API)
