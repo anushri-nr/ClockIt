@@ -12,18 +12,20 @@ import (
 
 // AssignedShiftResponse is the public response shape for assigned shifts
 type AssignedShiftResponse struct {
-	ID         uint   `json:"id"`
-	ShiftID    uint   `json:"shift_id"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
-	AssignedBy uint   `json:"assigned_by"`
-	AssignedAt string `json:"assigned_at"`
-	Status     string `json:"status"`
+	ID            uint    `json:"id"`
+	ShiftID       uint    `json:"shift_id"`
+	StartTime     string  `json:"start_time"`
+	EndTime       string  `json:"end_time"`
+	AssignedBy    uint    `json:"assigned_by"`
+	AssignedAt    string  `json:"assigned_at"`
+	Status        string  `json:"status"`
+	DurationHours float64 `json:"duration_hours"` // Added for Wage Calc
+	Earnings      float64 `json:"earnings"`       // Added for Wage Calc
 }
 
-// GetAssignedShifts returns assigned shifts for a worker
+// GetAssignedShifts returns assigned shifts for a worker, including calculated wages
 func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftResponse, error) {
-	// Validate employee exists and is a worker
+	// Validate employee exists and is a worker, and load their wage
 	var emp models.Employee
 	if err := database.DB.Where("id = ? AND role = ?", employeeID, models.RoleWorker).First(&emp).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -48,13 +50,21 @@ func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftRespo
 			AssignedBy: a.AssigneeID,
 			Status:     string(a.Status),
 		}
+
 		if !a.AssignedAt.IsZero() {
 			r.AssignedAt = a.AssignedAt.Format(time.RFC3339)
 		}
+		
 		if a.Shift.ID != 0 {
 			r.StartTime = a.Shift.StartTime.Format(time.RFC3339)
 			r.EndTime = a.Shift.EndTime.Format(time.RFC3339)
+			
+			// Issue #38: Wage Calculation
+			duration := a.Shift.EndTime.Sub(a.Shift.StartTime).Hours()
+			r.DurationHours = duration
+			r.Earnings = duration * emp.Wage
 		}
+		
 		resp = append(resp, r)
 	}
 
