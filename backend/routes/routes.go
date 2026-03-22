@@ -15,7 +15,7 @@ func RegisterRoutes(r *gin.Engine) {
 		supervisorRoutes.POST("/login", controllers.SupervisorLogin)
 		// protected endpoints - require authentication and supervisor role
 		supervisorRoutes.GET("/workers/availability", services.JWTAuthMiddleware(), services.SupervisorAuthorizationMiddleware(), controllers.GetWorkerAvailability)
-		supervisorRoutes.GET("/:employee_id/shifts", services.JWTAuthMiddleware(), services.SupervisorAuthorizationMiddleware(), controllers.GetShiftsCreatedBySupervisor)
+		supervisorRoutes.GET("/:employee_id/shifts", services.JWTAuthMiddleware(), services.SupervisorAuthorizationMiddleware(), controllers.GetShiftsByCompany)
 	}
 
 	workerRoutes := r.Group("/api/workers")

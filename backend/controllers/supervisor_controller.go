@@ -154,12 +154,29 @@ func GetWorkerAvailability(c *gin.Context) {
 	c.JSON(http.StatusOK, workers)
 }
 
-// GetShiftsCreatedBySupervisor returns shifts created by a supervisor (by path param employee_id)
-func GetShiftsCreatedBySupervisor(c *gin.Context) {
+// GetShiftsByCompany returns shifts for a supervisor's company, optionally filtered by status
+func GetShiftsByCompany(c *gin.Context) {
 	empParam := c.Param("employee_id")
 	if empParam == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "employee_id path parameter is required"})
 		return
+	}
+
+	statusParam := c.Query("status")
+	
+	// Validate status against the supported set
+	if statusParam != "" {
+		validStatuses := map[string]bool{
+			string(models.StatusAssigned):   true,
+			string(models.StatusReleased):   true,
+			string(models.StatusRejected):   true,
+			string(models.StatusRequested):  true,
+			string(models.StatusUnassigned): true,
+		}
+		if !validStatuses[statusParam] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status filter provided"})
+			return
+		}
 	}
 
 	empID64, err := strconv.ParseUint(empParam, 10, 64)
@@ -169,9 +186,10 @@ func GetShiftsCreatedBySupervisor(c *gin.Context) {
 	}
 
 	svc := services.SupervisorService{}
-	shifts, err := svc.GetShiftsCreatedBySupervisor(uint(empID64))
+	
+	shifts, err := svc.GetShiftsByCompany(uint(empID64), statusParam)
 	if err != nil {
-		log.Printf("GetShiftsCreatedBySupervisor: service error: %v", err)
+		log.Printf("GetShiftsByCompany: service error: %v", err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
 			return
