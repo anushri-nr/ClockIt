@@ -19,7 +19,7 @@ import (
 
 func setupTestDB(t *testing.T) string {
 	t.Helper()
-	path := "database/test.db"
+	path := "../database/test.db"
 	// Remove any existing test DB to start fresh
 	_ = os.Remove(path)
 	if err := database.Init(path); err != nil {

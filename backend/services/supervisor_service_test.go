@@ -14,7 +14,7 @@ import (
 
 func setupServiceTestDB(t *testing.T) {
 	t.Helper()
-	path := "database/test.db"
+	path := "../database/test.db"
 	_ = os.Remove(path)
 	if err := database.Init(path); err != nil {
 		t.Fatalf("failed to init database: %v", err)
