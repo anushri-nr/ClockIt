@@ -59,6 +59,8 @@ export class RegisterComponent implements OnInit {
     const roleFromUrl = this.route.snapshot.queryParams['role'];
     if (roleFromUrl) {
       this.user.role = roleFromUrl;
+    } else {
+      this.router.navigate(['/'])
     }
 
     this.companies$ = this.companyService.getCompanies();
@@ -73,9 +75,9 @@ export class RegisterComponent implements OnInit {
         this.isSubmitting = false;
         if(success) {
           if(this.user.role.toLowerCase() == "worker") {
-            this.router.navigate(['worker-dashboard']);
+            this.router.navigate(['/worker-dashboard']);
           } else {
-            this.router.navigate(['supervisor-dashboard']);
+            this.router.navigate(['/supervisor-dashboard']);
           }
         } else {
           alert("Registration failed. Please try again.");
