@@ -142,6 +142,35 @@ func GetShiftsForWorker(c *gin.Context) {
 		return
 	}
 
+	var startTime time.Time
+	var endTime time.Time
+	var filterByWindow bool
+
+	startParam := c.Query("start_time")
+	endParam := c.Query("end_time")
+	if startParam != "" || endParam != "" {
+		if startParam == "" || endParam == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "both start_time and end_time must be provided"})
+			return
+		}
+		var errP error
+		startTime, errP = time.Parse(time.RFC3339, startParam)
+		if errP != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format, use RFC3339"})
+			return
+		}
+		endTime, errP = time.Parse(time.RFC3339, endParam)
+		if errP != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format, use RFC3339"})
+			return
+		}
+		if endTime.Before(startTime) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "end_time must be equal or after start_time"})
+			return
+		}
+		filterByWindow = true
+	}
+
 	svc := services.WorkerService{
 		Repo: &repository.WorkerRepository{},
 	}
@@ -166,6 +195,27 @@ func GetShiftsForWorker(c *gin.Context) {
 				resp[i], resp[j] = resp[j], resp[i]
 			}
 		}
+    
+	// if time window provided, filter results
+	if filterByWindow {
+		filtered := make([]services.AssignedShiftResponse, 0, len(resp))
+		for _, r := range resp {
+			if r.StartTime == "" || r.EndTime == "" {
+				continue
+			}
+			st, err1 := time.Parse(time.RFC3339, r.StartTime)
+			et, err2 := time.Parse(time.RFC3339, r.EndTime)
+			if err1 != nil || err2 != nil {
+				continue
+			}
+			// include shift if it overlaps the provided window
+			if et.Before(startTime) || st.After(endTime) {
+    			continue
+			}
+			filtered = append(filtered, r)
+		}
+		c.JSON(http.StatusOK, filtered)
+		return
 	}
 
 	c.JSON(http.StatusOK, resp)
