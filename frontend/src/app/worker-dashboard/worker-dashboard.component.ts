@@ -10,6 +10,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, tap } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -36,11 +37,12 @@ interface Shift {
   templateUrl: './worker-dashboard.component.html',
   styleUrls: ['./worker-dashboard.component.scss']
 })
-export class WorkerDashboardComponent implements OnInit{
+export class WorkerDashboardComponent implements OnInit {
 
-  // --- HARDCODED WORKER ID (Remove when Login is built) ---
-  currentWorkerId = 3;
-  currentWorkerName = 'Worker3';
+  // Dynamic User Data (Replaced Hardcoded Values)
+  currentWorkerId: number = 0;
+  currentCompanyId: number = 0;
+  currentWorkerName: string = '';
 
   currentDateTime = '';
 
@@ -51,7 +53,10 @@ export class WorkerDashboardComponent implements OnInit{
   estEarnings = 0;
   hourlyWage = 15;
 
-  constructor(private workerService: WorkerService) { }
+  constructor(
+    private workerService: WorkerService,
+    private authService: AuthService
+  ) { }
 
   colDefs: ColDef[] = [
     // 1. Extract the Date from the start_time ISO string
@@ -111,16 +116,30 @@ export class WorkerDashboardComponent implements OnInit{
   ngOnInit() {
     this.updateDateTime();
 
-    // 2. Assign Observable with a 'tap' side-effect
-    // The 'tap' operator lets us run code (calculate stats) 
-    // without stopping the data from going to the HTML.
-    this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
-      tap((data) => {
-        console.log("Stream received data:", data);
-        this.calculateStats(data);
-        this.findNextShift(data);
-      })
-    );
+    // 1. Ask the single source of truth for the user
+    const user = this.authService.currentUserValue;
+
+    // 2. Safely assign variables and fetch data
+    if (user && user.id) {
+      this.currentWorkerId = user.id;
+      this.currentWorkerName = user.name || 'Worker';
+      this.currentCompanyId = user.company_id || 1;
+
+      console.log(`Worker Dashboard initialized for User ID: ${this.currentWorkerId}`);
+
+      // 3. Load shifts using the REAL dynamic ID
+      this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+        tap((data) => {
+          // Safeguard in case backend returns null
+          const safeData = data || []; 
+          console.log("Stream received data:", safeData);
+          this.calculateStats(safeData);
+          this.findNextShift(safeData);
+        })
+      );
+    } else {
+      console.error('CRITICAL: No valid user state found. Cannot load worker shifts.');
+    }
   }
 
   calculateStats(shifts: WorkerShift[]) {
