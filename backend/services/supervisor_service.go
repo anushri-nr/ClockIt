@@ -74,6 +74,9 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 			log.Printf("GetShiftsByCompany: supervisor not found: %v", err)
 			return []CreatedShiftsResponse{}, gorm.ErrRecordNotFound
 		}
+
+		log.Printf("GetShiftsByCompany: DB error validating supervisor: %v", err)
+		
 		return []CreatedShiftsResponse{}, err
 	}
 
