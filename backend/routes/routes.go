@@ -22,7 +22,7 @@ func RegisterRoutes(r *gin.Engine) {
 		supervisorRoutes.GET("/:employee_id/shifts", 
 			services.JWTAuthMiddleware(), 
 			services.SupervisorAuthorizationMiddleware(), 
-			controllers.GetShiftsByCompany
+			controllers.GetShiftsByCompany,
 		)
 	}
 

@@ -195,7 +195,8 @@ func GetShiftsForWorker(c *gin.Context) {
 				resp[i], resp[j] = resp[j], resp[i]
 			}
 		}
-    
+	}
+	
 	// if time window provided, filter results
 	if filterByWindow {
 		filtered := make([]services.AssignedShiftResponse, 0, len(resp))
