@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -19,12 +20,25 @@ import (
 
 func setupTestDB(t *testing.T) string {
 	t.Helper()
-	path := "../database/test.db"
-	// Remove any existing test DB to start fresh
-	_ = os.Remove(path)
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.db")
+
 	if err := database.Init(path); err != nil {
 		t.Fatalf("failed to init database: %v", err)
 	}
+
+	t.Cleanup(func() {
+		if database.DB != nil {
+			sqlDB, err := database.DB.DB()
+			if err == nil && sqlDB != nil {
+				_ = sqlDB.Close()
+			}
+			database.DB = nil
+		}
+		_ = os.Remove(path)
+	})
+
 	return path
 }
 

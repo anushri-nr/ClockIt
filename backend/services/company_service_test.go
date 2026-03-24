@@ -34,5 +34,8 @@ func TestListCompaniesService_Success(t *testing.T) {
 
 	list, err := ListCompanies()
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(list), 2)
+	require.Len(t, list, 2)
+	names := []string{list[0].Name, list[1].Name}
+	require.Contains(t, names, "C1")
+	require.Contains(t, names, "C2")
 }

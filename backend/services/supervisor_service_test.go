@@ -2,6 +2,7 @@ package services
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,11 +15,28 @@ import (
 
 func setupServiceTestDB(t *testing.T) {
 	t.Helper()
-	path := "../database/test.db"
-	_ = os.Remove(path)
+
+	// create a unique temp directory for this test and place the sqlite file inside it
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.db")
+
+	// initialize the database at this per-test path
 	if err := database.Init(path); err != nil {
 		t.Fatalf("failed to init database: %v", err)
 	}
+
+	// ensure the underlying sql.DB is closed and DB pointer cleared after the test
+	t.Cleanup(func() {
+		if database.DB != nil {
+			sqlDB, err := database.DB.DB()
+			if err == nil && sqlDB != nil {
+				_ = sqlDB.Close()
+			}
+			database.DB = nil
+		}
+		// try removing file just in case (TempDir will remove directory tree afterwards)
+		_ = os.Remove(path)
+	})
 }
 
 func TestSupervisorService_GetShiftsByCompany_NotFound(t *testing.T) {
