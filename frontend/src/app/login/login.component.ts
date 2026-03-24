@@ -43,6 +43,8 @@ export class LoginComponent implements OnInit {
     const roleFromUrl = this.route.snapshot.queryParams['role'];
     if (roleFromUrl) {
       this.currentRole = roleFromUrl;
+    } else {
+      this.router.navigate(['/']);
     }
   }
 

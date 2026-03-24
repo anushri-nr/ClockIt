@@ -52,13 +52,23 @@ func SupervisorRegister(c *gin.Context) {
 		return
 	}
 
+	token, err := services.GenerateToken(employee.ID, string(employee.Role))
+	if err != nil {
+		log.Printf("SupervisorRegister: token generation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
 	log.Printf("Supervisor registered successfully, id=%d", employee.ID)
 	c.JSON(http.StatusCreated, gin.H{
-		"id":         employee.ID,
-		"name":       employee.Name,
-		"email":      employee.Email,
-		"role":       employee.Role,
-		"company_id": employee.CompanyID,
+		"token": token,
+		"employee": gin.H{
+			"id":         employee.ID,
+			"name":       employee.Name,
+			"email":      employee.Email,
+			"role":       employee.Role,
+			"company_id": employee.CompanyID,
+		},
 	})
 }
 

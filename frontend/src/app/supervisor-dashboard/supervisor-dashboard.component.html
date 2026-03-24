@@ -96,7 +96,32 @@
         </div>
         <div class="modal-actions">
           <button class="btn ghost dark" type="button" (click)="closeOpenShiftsModal()">Close</button>
-          <button class="btn primary" type="button">Notify eligible workers</button>
+          <button class="btn primary" type="button" (click)="openAssignWorkerModal()">Assign Workers</button>
+        </div>
+      </div>
+
+      <div class="modal-grid" style="grid-template-columns: 1fr;">
+        <div class="panel">
+          <h3>Unassigned Shifts</h3>
+          
+          <div *ngIf="isLoadingOpenShifts" style="padding: 10px; color: #5a6472;">
+            Loading open shifts...
+          </div>
+          
+          <div *ngIf="!isLoadingOpenShifts && openShifts.length === 0" style="padding: 10px; color: #5a6472;">
+            Great job! There are currently no unassigned shifts.
+          </div>
+
+          <ul class="list compact" *ngIf="!isLoadingOpenShifts && openShifts.length > 0">
+            <li *ngFor="let shift of openShifts">
+              <div>
+                <div class="request-title">
+                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
+                </div>
+                <div class="request-sub">Status: {{ shift.status }}</div>
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -171,49 +196,44 @@
     </div>
   </section>
 
-  <section *ngIf="isStatusSnapshotOpen" class="shift-modal open" aria-label="Status snapshot">
+  <section *ngIf="isStatusSnapshotOpen" class="shift-modal open" aria-label="Pending Approvals">
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <div class="eyebrow dark">Coverage</div>
-          <h2>Status Snapshot</h2>
-          <p>Today’s coverage summary for the main store.</p>
+          <div class="eyebrow dark">Action Required</div>
+          <h2>Pending Approvals</h2>
+          <p>Review shift requests submitted by workers.</p>
         </div>
         <div class="modal-actions">
           <button class="btn ghost dark" type="button" (click)="closeStatusSnapshot()">Close</button>
         </div>
       </div>
 
-      <div class="modal-grid">
+      <div class="modal-grid" style="grid-template-columns: 1fr;">
         <div class="panel">
-          <h3>Today’s Coverage</h3>
-          <div class="attendance">
-            <div class="attendance-row">
-              <span>Scheduled</span>
-              <strong>42</strong>
-            </div>
-            <div class="attendance-row">
-              <span>Checked-in</span>
-              <strong>39</strong>
-            </div>
-            <div class="attendance-row">
-              <span>Absent</span>
-              <strong>2</strong>
-            </div>
-            <div class="attendance-row">
-              <span>No-show</span>
-              <strong>1</strong>
-            </div>
+          <h3>Requested Shifts</h3>
+          
+          <div *ngIf="isLoadingPendingShifts" style="padding: 10px; color: #5a6472;">
+            Loading requests...
           </div>
-        </div>
-        <div class="panel">
-          <h3>Notes</h3>
-          <div class="textarea">Front Desk down 1 headcount 2–6pm. Cashier coverage OK.</div>
-        </div>
-      </div>
+          
+          <div *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length === 0" style="padding: 10px; color: #5a6472;">
+            No pending approvals at this time.
+          </div>
 
-      <div class="modal-footer">
-        <button class="btn ghost dark" type="button" (click)="closeStatusSnapshot()">Close</button>
+          <ul class="list compact" *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length > 0">
+            <li *ngFor="let shift of pendingApprovalShifts">
+              <div>
+                <div class="request-title">
+                  {{ shift.assigned_to || 'A worker' }} requested a shift
+                </div>
+                <div class="request-sub">
+                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
@@ -255,7 +275,7 @@
       <article class="summary-card">
         <div class="summary-title">Overtime risk</div>
       </article>
-      <article class="summary-card">
+      <article class="summary-card clickable" role="button" tabindex="0" (click)="openStatusSnapshot()">
         <div class="summary-title">Pending approvals</div>
       </article>
     </section>

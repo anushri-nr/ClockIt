@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -49,13 +50,76 @@ func WorkerRegister(c *gin.Context) {
 		return
 	}
 
+	token, err := services.GenerateToken(employee.ID, string(employee.Role))
+	if err != nil {
+		log.Printf("WorkerRegister: token generation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
 	log.Printf("Worker registered successfully, id=%d", employee.ID)
 	c.JSON(http.StatusCreated, gin.H{
-		"id":        employee.ID,
-		"name":      employee.Name,
-		"email":     employee.Email,
-		"role":      employee.Role,
-		"companyID": employee.CompanyID,
+		"token": token,
+		"employee": gin.H{
+			"id":         employee.ID,
+			"name":       employee.Name,
+			"email":      employee.Email,
+			"role":       employee.Role,
+			"company_id": employee.CompanyID,
+		},
+	})
+}
+
+// WorkerLogin authenticates a worker and returns a JWT token
+func WorkerLogin(c *gin.Context) {
+	type Req struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("WorkerLogin: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		return
+	}
+
+	// find worker by email
+	var worker models.Employee
+	if err := services.FindEmployeeByEmailAndRole(req.Email, models.RoleWorker, &worker); err != nil {
+		log.Printf("WorkerLogin: lookup failed: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		}
+		return
+	}
+
+	// check password
+	if err := bcrypt.CompareHashAndPassword([]byte(worker.Password), []byte(req.Password)); err != nil {
+		log.Printf("WorkerLogin: password mismatch for email=%s: %v", req.Email, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+
+	// generate JWT
+	token, err := services.GenerateToken(worker.ID, string(worker.Role))
+	if err != nil {
+		log.Printf("WorkerLogin: token generation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+		"employee": gin.H{
+			"id":         worker.ID,
+			"name":       worker.Name,
+			"email":      worker.Email,
+			"role":       worker.Role,
+			"company_id": worker.CompanyID,
+		},
 	})
 }
 
