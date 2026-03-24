@@ -199,11 +199,8 @@ func GetShiftsForWorker(c *gin.Context) {
 				continue
 			}
 			// include shift if it overlaps the provided window
-			if et.Before(startTime) {
-				continue
-			}
-			if st.After(endTime) {
-				continue
+			if et.Before(startTime) || st.After(endTime) {
+    			continue
 			}
 			filtered = append(filtered, r)
 		}
