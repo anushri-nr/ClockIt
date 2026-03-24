@@ -97,6 +97,42 @@ func SupervisorAuthorizationMiddleware() gin.HandlerFunc {
 	}
 }
 
+// WorkerAuthorizationMiddleware ensures the caller is a worker and if the route
+// contains :employee_id, that it matches the authenticated employee ID.
+func WorkerAuthorizationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// role check
+		r, ok := c.Get(ContextEmployeeRole)
+		rs, _ := r.(string)
+		if !ok || rs != string(models.RoleWorker) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: worker access required"})
+			return
+		}
+
+		// optional path param check
+		pid := c.Param("employee_id")
+		if pid != "" {
+			p64, err := strconv.ParseUint(pid, 10, 64)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
+				return
+			}
+			authIDVal, ok := c.Get(ContextEmployeeID)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "missing authenticated employee id"})
+				return
+			}
+			authID, _ := authIDVal.(uint)
+			if uint(p64) != authID {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: cannot access shifts for this employee_id"})
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
 type JWTClaims struct {
 	EmployeeID uint   `json:"employee_id"`
 	Role       string `json:"role"`
