@@ -22,11 +22,12 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		workerRoutes.POST("/register", controllers.WorkerRegister)
 		workerRoutes.POST("/login", controllers.WorkerLogin)
-		workerRoutes.GET("/:employee_id/shifts", 
-			services.JWTAuthMiddleware(), 
+		workerRoutes.GET("/:employee_id/shifts",
+			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.GetShiftsForWorker,
 		)
+		workerRoutes.POST("/:employee_id/availability", services.JWTAuthMiddleware(), services.WorkerAuthorizationMiddleware(), controllers.CreateAvailability)
 	}
 
 	shiftRoutes := r.Group("/api/shifts")
