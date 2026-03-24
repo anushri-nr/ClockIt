@@ -150,25 +150,25 @@ func GetShiftsForWorker(c *gin.Context) {
 	endParam := c.Query("end_time")
 	if startParam != "" || endParam != "" {
 		if startParam == "" || endParam == "" {
-			filterByWindow = false
-		} else {
-			var errP error
-			startTime, errP = time.Parse(time.RFC3339, startParam)
-			if errP != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format, use RFC3339"})
-				return
-			}
-			endTime, errP = time.Parse(time.RFC3339, endParam)
-			if errP != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format, use RFC3339"})
-				return
-			}
-			if endTime.Before(startTime) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "end_time must be equal or after start_time"})
-				return
-			}
-			filterByWindow = true
+			c.JSON(http.StatusBadRequest, gin.H{"error": "both start_time and end_time must be provided"})
+			return
 		}
+		var errP error
+		startTime, errP = time.Parse(time.RFC3339, startParam)
+		if errP != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time format, use RFC3339"})
+			return
+		}
+		endTime, errP = time.Parse(time.RFC3339, endParam)
+		if errP != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time format, use RFC3339"})
+			return
+		}
+		if endTime.Before(startTime) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "end_time must be equal or after start_time"})
+			return
+		}
+		filterByWindow = true
 	}
 
 	svc := services.WorkerService{
@@ -200,11 +200,9 @@ func GetShiftsForWorker(c *gin.Context) {
 			}
 			// include shift if it overlaps the provided window
 			if et.Before(startTime) {
-				// shift ends before window starts -> exclude
 				continue
 			}
 			if st.After(endTime) {
-				// shift starts after window ends -> exclude
 				continue
 			}
 			filtered = append(filtered, r)
