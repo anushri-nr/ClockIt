@@ -31,8 +31,17 @@ func RegisterRoutes(r *gin.Engine) {
 
 	shiftRoutes := r.Group("/api/shifts")
 	{
-		shiftRoutes.POST("/create", controllers.CreateShift)
-		shiftRoutes.POST("/assign", controllers.AssignWorkerToShift)
+		// We add both middlewares to ensure only logged-in supervisors can touch shifts
+		shiftRoutes.POST("/create", 
+			services.JWTAuthMiddleware(), 
+			services.SupervisorAuthorizationMiddleware(), 
+			controllers.CreateShift,
+		)
+		shiftRoutes.POST("/assign", 
+			services.JWTAuthMiddleware(), 
+			services.SupervisorAuthorizationMiddleware(), 
+			controllers.AssignWorkerToShift,
+		)
 	}
 
 	companyRoutes := r.Group("/api/companies")
