@@ -168,7 +168,6 @@ export class SupervisorDashboardComponent implements OnInit {
         console.log("Worker assigned successfully");
 
         this.closeAssignWorkerModal();
-
         this.cdr.detectChanges();
         
         // Refresh the grid to show the new assignment
@@ -176,7 +175,15 @@ export class SupervisorDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error('Assignment failed', err);
-        this.assignShiftError = 'Failed to assign worker. Please try again.';
+        
+        // Intercept the SQLite database error and make it user-friendly
+        const backendError = err.error?.error || '';
+        if (backendError.includes('UNIQUE constraint failed')) {
+          this.assignShiftError = 'This worker is already assigned to this specific shift!';
+        } else {
+          this.assignShiftError = 'Failed to assign worker. Please try again.';
+        }
+        
         this.cdr.detectChanges();
       }
     });
