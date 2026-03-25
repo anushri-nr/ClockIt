@@ -186,6 +186,17 @@ func GetShiftsForWorker(c *gin.Context) {
 		return
 	}
 
+	// Sort shifts by start time
+	for i := 0; i < len(resp)-1; i++ {
+		for j := i + 1; j < len(resp); j++ {
+			timeI, errI := time.Parse(time.RFC3339, resp[i].StartTime)
+			timeJ, errJ := time.Parse(time.RFC3339, resp[j].StartTime)
+			if errI == nil && errJ == nil && timeJ.Before(timeI) {
+				resp[i], resp[j] = resp[j], resp[i]
+			}
+		}
+	}
+	
 	// if time window provided, filter results
 	if filterByWindow {
 		filtered := make([]services.AssignedShiftResponse, 0, len(resp))
@@ -209,4 +220,58 @@ func GetShiftsForWorker(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+// CreateAvailability allows a worker to set their availability for a specific day of the week
+func CreateAvailability(c *gin.Context) {
+	type Req struct {
+		DayOfWeek int    `json:"day_of_week" binding:"required,min=0,max=6"`
+		StartTime string `json:"start_time" binding:"required"`
+		EndTime   string `json:"end_time" binding:"required"`
+	}
+
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("CreateAvailability: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		return
+	}
+
+	empParam := c.Param("employee_id")
+	if empParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "employee_id path parameter is required"})
+		return
+	}
+
+	empID64, err := strconv.ParseUint(empParam, 10, 64)
+	if err != nil {
+		log.Printf("CreateAvailability: invalid employee_id: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
+		return
+	}
+
+	log.Printf("Creating availability for worker %d: day=%d, start=%s, end=%s", empID64, req.DayOfWeek, req.StartTime, req.EndTime)
+
+	availability, err := services.CreateWorkerAvailability(uint(empID64), req.DayOfWeek, req.StartTime, req.EndTime)
+	if err != nil {
+		log.Printf("CreateAvailability: service error: %v", err)
+
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
+            return
+        }
+
+        c.JSON(http.StatusBadRequest, gin.H{"error": "failed to create availability"})
+        return
+	}
+
+	log.Printf("Availability created successfully, id=%d", availability.ID)
+	c.JSON(http.StatusCreated, gin.H{
+		"id":          availability.ID,
+		"worker_id":   availability.WorkerID,
+		"day_of_week": availability.DayOfWeek,
+		"start_time": availability.StartTime,
+		"end_time":   availability.EndTime,
+		"created_at": availability.CreatedAt.Format(time.RFC3339),
+	})
 }
