@@ -36,6 +36,15 @@ func setupShiftControllerTestDB(t *testing.T) {
 		&models.ShiftAssignment{},
 	)
 	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		if database.DB != nil {
+			if sqlDB, err := database.DB.DB(); err == nil {
+				_ = sqlDB.Close()
+			}
+			database.DB = nil
+		}
+	})
 }
 
 func seedCompanyAndUsersForShiftTests(t *testing.T) {
