@@ -32,6 +32,8 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 
 ### 5. **Quality Improvements**
 - Expand backend unit test coverage
+- Implement Cypress End-to-End (E2E) tests for frontend authentication flows
+- Write Angular Unit Tests (Jasmine/Karma) for core frontend services to reach a 1:1 function ratio
 
 ---
 
@@ -68,6 +70,8 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 **Testing Improved**: Additional backend unit tests strengthened confidence in the sprint deliverables.
 
 **Carryover Identified**: Worker dashboard enhancements for wage view, upcoming shifts, weekly hours, and estimated earnings are actively in progress and will continue into the next sprint if not completed in time.
+
+**Frontend Integration & Testing:** Successfully integrated JWT authentication state across the frontend using a centralized `BehaviorSubject`, and verified the entire Supervisor flow using automated Cypress E2E tests and Angular unit tests.
 
 ---
 
