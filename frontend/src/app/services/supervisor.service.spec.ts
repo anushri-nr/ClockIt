@@ -46,7 +46,7 @@ describe('SupervisorService', () => {
     // Changed to match the exact URL your service is actually calling
     const req = httpMock.expectOne('http://localhost:8080/api/shifts/assign');
     expect(req.request.method).toBe('POST');
-    // We removed the strict body check to prevent any other strict-typing domino errors
+    expect(req.request.body).toEqual({ shift_id: 10, employee_id: 5 });
     req.flush({ message: 'Success' });
   });
 

@@ -29,7 +29,12 @@ func CreateShift(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
 		return
 	}
-	createdBy := authIDVal.(uint)
+	authID, ok := authIDVal.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	createdBy := authID
 
 	// Parse timestamps (ISO 8601 format)
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
