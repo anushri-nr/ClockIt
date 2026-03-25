@@ -1,7 +1,7 @@
 describe('Supervisor Authentication Flow', () => {
   it('should successfully log in a supervisor and load the dashboard', () => {
     // 1. Start at the landing page
-    cy.visit('http://localhost:4200/home');
+    cy.visit('/home');
 
     // 2. Select the Supervisor role
     cy.contains('Supervisor').click();

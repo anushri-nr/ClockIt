@@ -163,7 +163,7 @@ export class SupervisorDashboardComponent implements OnInit {
     const shiftIdNum = Number(this.selectedShiftId);
     const workerIdNum = Number(this.selectedWorkerId);
 
-    this.supervisorService.assignWorker(shiftIdNum, workerIdNum, this.currentSupervisorId).subscribe({
+    this.supervisorService.assignWorker(shiftIdNum, workerIdNum).subscribe({
       next: () => {
         console.log("Worker assigned successfully");
 

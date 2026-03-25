@@ -39,7 +39,7 @@ describe('SupervisorService', () => {
 
   // Test 2: Assign Worker
   it('should assign a worker to a shift', () => {
-    service.assignWorker(10, 5, 8).subscribe(response => {
+    service.assignWorker(10, 5).subscribe(response => {
       expect(response).toBeTruthy();
     });
 
