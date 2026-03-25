@@ -46,7 +46,7 @@ func CreateShift(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, req.CreatedBy)
+	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, createdBy)
 
 	shift, err := services.CreateShift(startTime, endTime, createdBy)
 	if err != nil {
