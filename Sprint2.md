@@ -43,7 +43,7 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 | #36 | Backend: Login Worker API | Complete | farcyson |
 | #37 | Backend: Authentication and Authorization | Complete | avantikahollas, farcyson |
 | #38 | Backend: Wage Calculation: Worker Functionality | Complete | farcyson |
-| #45 | Enchancement: Fix Backend Shifts API to return a sorted list | Complete | anushri-nr |
+| #45 | Enhancement: Fix Backend Shifts API to return a sorted list | Complete | anushri-nr |
 | #47 | Enhancement: Get Shifts API to have Start and End Time | Complete | avantikahollas |
 | #50 | Frontend: Pending Approval: Supervisor Dashboard | Complete | farcyson |
 | #51 | Frontend: Fix: Logged in user name must be visible on the profile | Complete | farcyson |
