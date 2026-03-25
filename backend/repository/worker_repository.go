@@ -29,7 +29,7 @@ func (r *WorkerRepository) FindAvailableWorkers(date time.Time, companyID uint) 
 		log.Printf("GetWorkersAvailableForDate: DB query error: %v", err)
 		return []models.WorkerAvailability{}, err
 	}
-
+	log.Printf("GetWorkersAvailableForDate: found %d availabilities for date=%v, company_id=%d", len(availabilities), date, companyID)
 	return availabilities, nil
 }
 
