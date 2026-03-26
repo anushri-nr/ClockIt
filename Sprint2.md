@@ -152,6 +152,11 @@ No major blockers were recorded in the sprint issue list. The main remaining wor
   - `TestAssignWorkerToShift_WorkerNotFound`
   - `TestAssignWorkerToShift_SupervisorNotAuthorized`
   - `TestAssignWorkerToShift_WorkerHasWrongRole`
+- `supervisor_service_test.go`
+  - `TestSupervisorService_GetShiftsByCompany_NotFound`
+  - `TestSupervisorService_GetShiftsByCompany_Success`
+  - `TestWorkerService_GetWorkersAvailable_Success`
+  - `TestWorkerService_GetWorkersAvailable_NoResults`
 - `worker_service_test.go`
   - `TestCreateWorkerAvailability`
   - `TestGetAssignedShifts`
