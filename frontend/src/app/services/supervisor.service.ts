@@ -31,10 +31,17 @@ export class SupervisorService {
 
   constructor(private http: HttpClient) { }
 
-  // 1. GET MAIN GRID (Real API)
-  // Backend Route: GET /api/supervisors/:employee_id/shifts
-  getShifts(supervisorId: number): Observable<Shift[]> {
-    return this.http.get<Shift[]>(`${this.apiUrl}/${supervisorId}/shifts`);
+  // 1. GET SHIFTS (Real API - Updated with Status Filter)
+  // Backend Route: GET /api/supervisors/:employee_id/shifts?status=XYZ
+  getShifts(supervisorId: number, status?: string): Observable<Shift[]> {
+    let params = new HttpParams();
+    
+    // If a status was passed in (e.g., 'Unassigned' or 'Requested'), add it to the query string
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    return this.http.get<Shift[]>(`${this.apiUrl}/${supervisorId}/shifts`, { params });
   }
 
   // 2. GET AVAILABLE WORKERS (Real API)
@@ -51,11 +58,10 @@ export class SupervisorService {
 
   // 3. ASSIGN WORKER TO SHIFT
   // Backend Route: POST /api/shifts/assign
-  assignWorker(shiftId: number, workerId: number, assignedBy: number): Observable<any> {
+  assignWorker(shiftId: number, workerId: number): Observable<any> {
     const payload = {
       shift_id: shiftId,
       employee_id: workerId,
-      assigned_by: assignedBy
     };
     // Note: The route is actually under 'shifts', not 'supervisors'
     // So we use a different base URL for this specific call

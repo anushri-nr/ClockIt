@@ -14,7 +14,6 @@ func CreateShift(c *gin.Context) {
 	type Req struct {
 		StartTime string `json:"start_time" binding:"required"`
 		EndTime   string `json:"end_time" binding:"required"`
-		CreatedBy uint   `json:"created_by" binding:"required"`
 	}
 
 	var req Req
@@ -23,6 +22,19 @@ func CreateShift(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
 		return
 	}
+
+	// Extract the ID directly from the validated JWT Token
+	authIDVal, exists := c.Get(services.ContextEmployeeID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	authID, ok := authIDVal.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	createdBy := authID
 
 	// Parse timestamps (ISO 8601 format)
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
@@ -39,9 +51,9 @@ func CreateShift(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, req.CreatedBy)
+	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, createdBy)
 
-	shift, err := services.CreateShift(startTime, endTime, req.CreatedBy)
+	shift, err := services.CreateShift(startTime, endTime, createdBy)
 	if err != nil {
 		log.Printf("Failed to create shift: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -63,19 +75,27 @@ func AssignWorkerToShift(c *gin.Context) {
 	type Req struct {
 		ShiftID    uint `json:"shift_id" binding:"required"`
 		EmployeeID uint `json:"employee_id" binding:"required"`
-		AssignedBy uint `json:"assigned_by" binding:"required"` // Temporary field to track who made the assignment (supervisor ID) for auditing purposes. Replace with authenticated user context.
+		// AssignedBy is removed! The frontend no longer needs to send it.
 	}
 
 	var req Req
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("AssignWorkerToShift: binding error: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload provided"})
 		return
 	}
 
-	log.Printf("Assigning worker: shift=%d, employee=%d, assignedBy=%d", req.ShiftID, req.EmployeeID, req.AssignedBy)
+	// Extract the ID directly from the validated JWT Token
+	authIDVal, exists := c.Get(services.ContextEmployeeID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	assignedBy := authIDVal.(uint) // Safely cast the token ID to a uint
 
-	assignment, err := services.AssignWorkerToShift(req.ShiftID, req.EmployeeID, req.AssignedBy)
+	log.Printf("Assigning worker: shift=%d, employee=%d, assignedBy=%d", req.ShiftID, req.EmployeeID, assignedBy)
+
+	assignment, err := services.AssignWorkerToShift(req.ShiftID, req.EmployeeID, assignedBy)
 	if err != nil {
 		log.Printf("Failed to assign worker: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

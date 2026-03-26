@@ -1,0 +1,283 @@
+package controllers
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"clockit/backend/database"
+	"clockit/backend/models"
+	"clockit/backend/services"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+)
+
+func setupWorkerControllerRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	// routes under test
+	r.POST("/api/workers/register", WorkerRegister)
+	r.POST("/api/workers/login", WorkerLogin)
+	r.GET("/api/workers/:employee_id/shifts", GetShiftsForWorker)
+	r.POST("/api/workers/:employee_id/availability", CreateAvailability)
+
+	return r
+}
+
+func TestWorkerRegister_BadRequest_InvalidPayload(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	// missing required fields + invalid email
+	body := `{"name":"A","email":"not-an-email","password":"123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/register", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestWorkerLogin_BadRequest_InvalidPayload(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	// missing password, invalid email
+	body := `{"email":"bad-email"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/login", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetShiftsForWorker_BadRequest_InvalidEmployeeID(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/abc/shifts", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateAvailability_BadRequest_InvalidEmployeeID(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	body := `{"day_of_week":1,"start_time":"09:00:00","end_time":"17:00:00"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/abc/availability", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateAvailability_BadRequest_InvalidBody(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	// day_of_week out of allowed range [0..6]
+	body := `{"day_of_week":9,"start_time":"09:00:00","end_time":"17:00:00"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/1/availability", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateAvailability_WorkerNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	r := gin.New()
+	r.POST("/api/workers/:employee_id/availability", CreateAvailability)
+
+	body := `{"day_of_week":1,"start_time":"09:00:00","end_time":"17:00:00"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/999999/availability", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestCreateAvailability_MalformedJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	r := gin.New()
+	r.POST("/api/workers/:employee_id/availability", CreateAvailability)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/1/availability", bytes.NewBufferString(`{"day_of_week":`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetShiftsForWorker_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	r := gin.New()
+	r.GET("/api/workers/:employee_id/shifts", GetShiftsForWorker)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/999999/shifts", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetShiftsForWorker_Success_Empty(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "WorkerShiftCo"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker := models.Employee{
+		ID:        42,
+		Name:      "Worker 42",
+		Email:     "worker42@test.local",
+		Role:      models.RoleWorker,
+		CompanyID: company.ID,
+		Wage:      20,
+	}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	r := gin.New()
+	r.GET("/api/workers/:employee_id/shifts", GetShiftsForWorker)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/42/shifts", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var out []map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
+	require.Len(t, out, 0)
+}
+
+func TestWorkerRegister_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t) // helper from supervisor_controller_test.go (same package)
+
+	require.NoError(t, services.InitAuth("test-secret"))
+
+	company := models.Company{Name: "Worker Register Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	r := gin.New()
+	r.POST("/api/workers/register", WorkerRegister)
+
+	body := map[string]interface{}{
+		"name":       "Worker One",
+		"email":      "worker.one@test.local",
+		"password":   "password123",
+		"address":    "123 Main St",
+		"phone_no":   "1234567890",
+		"company_id": company.ID,
+		"wage":       22.5,
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/register", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotEmpty(t, resp["token"])
+	require.NotNil(t, resp["employee"])
+}
+
+func TestWorkerRegister_RegisterEmployeeError_InvalidCompany(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	require.NoError(t, services.InitAuth("test-secret"))
+
+	r := gin.New()
+	r.POST("/api/workers/register", WorkerRegister)
+
+	// company_id does not exist -> RegisterEmployee should fail -> 400 branch
+	body := map[string]interface{}{
+		"name":       "Worker Bad Company",
+		"email":      "worker.badcompany@test.local",
+		"password":   "password123",
+		"address":    "123 Main St",
+		"phone_no":   "1234567890",
+		"company_id": 999999,
+		"wage":       18.0,
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/register", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestWorkerLogin_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t) // shared helper in controllers package
+
+	require.NoError(t, services.InitAuth("test-secret"))
+
+	company := models.Company{Name: "Worker Login Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker, err := services.RegisterEmployee(
+		"Login Worker",
+		"login.worker@test.local",
+		"password123",
+		"123 Main St",
+		"9999999999",
+		company.ID,
+		20.0,
+		models.RoleWorker,
+	)
+	require.NoError(t, err)
+	require.NotZero(t, worker.ID)
+
+	r := gin.New()
+	r.POST("/api/workers/login", WorkerLogin)
+
+	body := map[string]string{
+		"email":    "login.worker@test.local",
+		"password": "password123",
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/login", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotEmpty(t, resp["token"])
+	require.NotNil(t, resp["employee"])
+}

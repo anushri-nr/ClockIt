@@ -9,6 +9,7 @@ const (
 	StatusReleased  AssignmentStatus = "Released"
 	StatusRejected  AssignmentStatus = "Rejected"
 	StatusRequested AssignmentStatus = "Requested"
+	StatusUnassigned AssignmentStatus = "Unassigned"
 )
 
 // Shift represents a time slot created by a supervisor

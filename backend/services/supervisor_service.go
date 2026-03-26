@@ -66,27 +66,45 @@ type CreatedShiftsResponse struct {
 
 type SupervisorService struct{}
 
-// GetShiftsCreatedBySupervisor returns all shifts created by a supervisor
-func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]CreatedShiftsResponse, error) {
-	// validate supervisor exists and role
+// GetShiftsByCompany returns all shifts for a supervisor's company, optionally filtered by status
+func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter string) ([]CreatedShiftsResponse, error) {
 	var sup models.Employee
 	if err := database.DB.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("GetShiftsCreatedBySupervisor: supervisor not found: %v", err)
+			log.Printf("GetShiftsByCompany: supervisor not found: %v", err)
 			return []CreatedShiftsResponse{}, gorm.ErrRecordNotFound
 		}
-		log.Printf("GetShiftsCreatedBySupervisor: DB error validating supervisor: %v", err)
+
+		log.Printf("GetShiftsByCompany: DB error validating supervisor: %v", err)
+		
 		return []CreatedShiftsResponse{}, err
 	}
 
-	var shifts []models.Shift
-	if err := database.DB.Where("created_by = ?", supervisorID).
+	// Base Query: Filters by Company ID
+	query := database.DB.Model(&models.Shift{}).
+		Joins("JOIN employees ON employees.id = shifts.created_by").
+		Where("employees.company_id = ?", sup.CompanyID).
 		Preload("Creator").
 		Preload("Assignments").
 		Preload("Assignments.Employee").
-		Preload("Assignments.Assignee").
-		Find(&shifts).Error; err != nil {
-		log.Printf("GetShiftsCreatedBySupervisor: DB query failed: %v", err)
+		Preload("Assignments.Assignee")
+
+	// Only Group By when we actually execute a JOIN on assignments
+	if statusFilter != "" {
+		query = query.Joins("LEFT JOIN shift_assignments ON shift_assignments.shift_id = shifts.id").
+			Group("shifts.id")
+		
+		// If Unassigned, only check for IS NULL since it's not a saved DB value
+		if statusFilter == string(models.StatusUnassigned) {
+			query = query.Where("shift_assignments.id IS NULL")
+		} else {
+			query = query.Where("shift_assignments.status = ?", statusFilter)
+		}
+	}
+
+	var shifts []models.Shift
+	if err := query.Find(&shifts).Error; err != nil {
+		log.Printf("GetShiftsByCompany: DB query failed: %v", err)
 		return []CreatedShiftsResponse{}, err
 	}
 
@@ -94,7 +112,10 @@ func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]C
 	for _, sft := range shifts {
 		var assignedBy uint
 		var assignedTo string
-		var status string
+		
+		// Use the new Enum as the default string
+		status := string(models.StatusUnassigned) 
+
 		if len(sft.Assignments) > 0 {
 			a := sft.Assignments[0]
 			assignedBy = a.AssigneeID
@@ -114,10 +135,8 @@ func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]C
 			AssignedTo: assignedTo,
 			Status:     status,
 		}
-
 		resp = append(resp, sc)
 	}
 
-	log.Printf("GetShiftsCreatedBySupervisor: returning %d shifts for supervisor=%d", len(resp), supervisorID)
 	return resp, nil
 }

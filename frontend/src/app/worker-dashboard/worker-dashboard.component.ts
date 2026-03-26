@@ -10,6 +10,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, tap } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -36,22 +37,33 @@ interface Shift {
   templateUrl: './worker-dashboard.component.html',
   styleUrls: ['./worker-dashboard.component.scss']
 })
-export class WorkerDashboardComponent implements OnInit{
+export class WorkerDashboardComponent implements OnInit {
 
-  // --- HARDCODED WORKER ID (Remove when Login is built) ---
-  currentWorkerId = 3;
-  currentWorkerName = 'Worker3';
+  // Dynamic User Data (Replaced Hardcoded Values)
+  currentWorkerId: number = 0;
+  currentCompanyId: number = 0;
+  currentWorkerName: string = '';
 
   currentDateTime = '';
 
   myShifts$!: Observable<WorkerShift[]>;
   nextShift: WorkerShift | null = null;
+  assignedShifts: WorkerShift[] = [];
 
   totalHours = 0;
   estEarnings = 0;
   hourlyWage = 15;
+  weeklyTarget = 40;
+  dailyTarget = 8;
+  weeklyTotal = 0;
+  weeklyProgress = 0;
+  weekRangeLabel = '';
+  weeklyDays: Array<{ label: string; date: Date; hours: number; percent: number }> = [];
 
-  constructor(private workerService: WorkerService) { }
+  constructor(
+    private workerService: WorkerService,
+    private authService: AuthService
+  ) { }
 
   colDefs: ColDef[] = [
     // 1. Extract the Date from the start_time ISO string
@@ -111,16 +123,31 @@ export class WorkerDashboardComponent implements OnInit{
   ngOnInit() {
     this.updateDateTime();
 
-    // 2. Assign Observable with a 'tap' side-effect
-    // The 'tap' operator lets us run code (calculate stats) 
-    // without stopping the data from going to the HTML.
-    this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
-      tap((data) => {
-        console.log("Stream received data:", data);
-        this.calculateStats(data);
-        this.findNextShift(data);
-      })
-    );
+    // 1. Ask the single source of truth for the user
+    const user = this.authService.currentUserValue;
+
+    // 2. Safely assign variables and fetch data
+    if (user && user.id) {
+      this.currentWorkerId = user.id;
+      this.currentWorkerName = user.name || 'Worker';
+      this.currentCompanyId = user.company_id || 1;
+
+      console.log(`Worker Dashboard initialized for User ID: ${this.currentWorkerId}`);
+
+      // 3. Load shifts using the REAL dynamic ID
+      this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+        tap((data) => {
+          const safeData = data || [];
+          console.log("Stream received data:", safeData);
+          this.calculateStats(safeData);
+          this.findNextShift(safeData);
+          this.assignedShifts = this.getAssignedShifts(safeData);
+          this.calculateWeeklyAssigned(safeData);
+        })
+      );
+    } else {
+      console.error('CRITICAL: No valid user state found. Cannot load worker shifts.');
+    }
   }
 
   calculateStats(shifts: WorkerShift[]) {
@@ -148,12 +175,73 @@ export class WorkerDashboardComponent implements OnInit{
     // safety check
     if (!shifts) return;
 
-    // Filter for future shifts and sort by start time
-    const futureShifts = shifts
+    const assignedShifts = this.getAssignedShifts(shifts);
+
+    // Filter for future assigned shifts and sort by start time
+    const futureShifts = assignedShifts
       .filter(s => new Date(s.start_time).getTime() > now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
     this.nextShift = futureShifts.length > 0 ? futureShifts[0] : null;
+  }
+
+  private getAssignedShifts(shifts: WorkerShift[]) {
+    if (!shifts) return [];
+    return shifts.filter(shift => shift.status?.toLowerCase() === 'assigned');
+  }
+
+  calculateWeeklyAssigned(shifts: WorkerShift[]) {
+    const now = new Date();
+    const startOfWeek = this.getStartOfWeek(now);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    this.weekRangeLabel = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    this.weeklyDays = dayLabels.map((label, index) => {
+      const dayDate = new Date(startOfWeek);
+      dayDate.setDate(startOfWeek.getDate() + index);
+      return { label, date: dayDate, hours: 0, percent: 0 };
+    });
+
+    this.weeklyTotal = 0;
+
+    shifts.forEach(shift => {
+      if (!shift.start_time || !shift.end_time) return;
+
+      const status = shift.status?.toLowerCase();
+      if (status && status !== 'assigned' && status !== 'completed') return;
+
+      const start = new Date(shift.start_time);
+      const end = new Date(shift.end_time);
+
+      if (start < startOfWeek || start > endOfWeek) return;
+
+      const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      if (durationHours <= 0) return;
+
+      const dayIndex = (start.getDay() + 6) % 7;
+      this.weeklyDays[dayIndex].hours += durationHours;
+      this.weeklyTotal += durationHours;
+    });
+
+    this.weeklyDays = this.weeklyDays.map(day => ({
+      ...day,
+      percent: Math.min(100, (day.hours / this.dailyTarget) * 100)
+    }));
+
+    this.weeklyProgress = Math.min(100, (this.weeklyTotal / this.weeklyTarget) * 100);
+  }
+
+  private getStartOfWeek(date: Date) {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = (day + 6) % 7;
+    start.setDate(start.getDate() - diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
   }
 
   private updateDateTime() {
