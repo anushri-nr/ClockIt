@@ -8,15 +8,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-<<<<<<< HEAD
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-=======
-
-	"github.com/gin-gonic/gin"
->>>>>>> main
 	"gorm.io/gorm"
 )
 
@@ -56,7 +51,6 @@ func WorkerRegister(c *gin.Context) {
 		return
 	}
 
-<<<<<<< HEAD
 	token, err := services.GenerateToken(employee.ID, string(employee.Role))
 	if err != nil {
 		log.Printf("WorkerRegister: token generation failed: %v", err)
@@ -127,15 +121,6 @@ func WorkerLogin(c *gin.Context) {
 			"role":       worker.Role,
 			"company_id": worker.CompanyID,
 		},
-=======
-	log.Printf("Worker registered successfully, id=%d", employee.ID)
-	c.JSON(http.StatusCreated, gin.H{
-		"id":        employee.ID,
-		"name":      employee.Name,
-		"email":     employee.Email,
-		"role":      employee.Role,
-		"companyID": employee.CompanyID,
->>>>>>> main
 	})
 }
 
@@ -157,7 +142,6 @@ func GetShiftsForWorker(c *gin.Context) {
 		return
 	}
 
-<<<<<<< HEAD
 	var startTime time.Time
 	var endTime time.Time
 	var filterByWindow bool
@@ -187,8 +171,6 @@ func GetShiftsForWorker(c *gin.Context) {
 		filterByWindow = true
 	}
 
-=======
->>>>>>> main
 	svc := services.WorkerService{
 		Repo: &repository.WorkerRepository{},
 	}
@@ -204,7 +186,6 @@ func GetShiftsForWorker(c *gin.Context) {
 		return
 	}
 
-<<<<<<< HEAD
 	// Sort shifts by start time
 	for i := 0; i < len(resp)-1; i++ {
 		for j := i + 1; j < len(resp); j++ {
@@ -294,7 +275,3 @@ func CreateAvailability(c *gin.Context) {
 		"created_at": availability.CreatedAt.Format(time.RFC3339),
 	})
 }
-=======
-	c.JSON(http.StatusOK, resp)
-}
->>>>>>> main

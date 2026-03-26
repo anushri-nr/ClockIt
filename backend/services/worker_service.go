@@ -12,7 +12,6 @@ import (
 
 // AssignedShiftResponse is the public response shape for assigned shifts
 type AssignedShiftResponse struct {
-<<<<<<< HEAD
 	ID            uint    `json:"id"`
 	ShiftID       uint    `json:"shift_id"`
 	StartTime     string  `json:"start_time"`
@@ -27,20 +26,6 @@ type AssignedShiftResponse struct {
 // GetAssignedShifts returns assigned shifts for a worker, including calculated wages
 func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftResponse, error) {
 	// Validate employee exists and is a worker, and load their wage
-=======
-	ID         uint   `json:"id"`
-	ShiftID    uint   `json:"shift_id"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
-	AssignedBy uint   `json:"assigned_by"`
-	AssignedAt string `json:"assigned_at"`
-	Status     string `json:"status"`
-}
-
-// GetAssignedShifts returns assigned shifts for a worker
-func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftResponse, error) {
-	// Validate employee exists and is a worker
->>>>>>> main
 	var emp models.Employee
 	if err := database.DB.Where("id = ? AND role = ?", employeeID, models.RoleWorker).First(&emp).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -65,7 +50,6 @@ func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftRespo
 			AssignedBy: a.AssigneeID,
 			Status:     string(a.Status),
 		}
-<<<<<<< HEAD
 
 		if !a.AssignedAt.IsZero() {
 			r.AssignedAt = a.AssignedAt.Format(time.RFC3339)
@@ -81,22 +65,12 @@ func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftRespo
 			r.Earnings = duration * emp.Wage
 		}
 		
-=======
-		if !a.AssignedAt.IsZero() {
-			r.AssignedAt = a.AssignedAt.Format(time.RFC3339)
-		}
-		if a.Shift.ID != 0 {
-			r.StartTime = a.Shift.StartTime.Format(time.RFC3339)
-			r.EndTime = a.Shift.EndTime.Format(time.RFC3339)
-		}
->>>>>>> main
 		resp = append(resp, r)
 	}
 
 	log.Printf("GetAssignedShifts: returning %d assignments for employee=%d", len(resp), employeeID)
 	return resp, nil
 }
-<<<<<<< HEAD
 
 // CreateWorkerAvailability allows a worker to set their availability for a specific day of the week
 func CreateWorkerAvailability(workerID uint, dayOfWeek int, startTime string, endTime string) (*models.WorkerAvailability, error) {
@@ -126,5 +100,3 @@ func CreateWorkerAvailability(workerID uint, dayOfWeek int, startTime string, en
 	log.Printf("CreateWorkerAvailability: availability created successfully for worker=%d on day=%d", workerID, dayOfWeek)
 	return availability, nil
 }
-=======
->>>>>>> main

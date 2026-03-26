@@ -12,10 +12,7 @@ import (
 	"clockit/backend/models"
 
 	"github.com/gin-gonic/gin"
-<<<<<<< HEAD
 	"golang.org/x/crypto/bcrypt"
-=======
->>>>>>> main
 	"gorm.io/gorm"
 )
 
@@ -55,7 +52,6 @@ func SupervisorRegister(c *gin.Context) {
 		return
 	}
 
-<<<<<<< HEAD
 	token, err := services.GenerateToken(employee.ID, string(employee.Role))
 	if err != nil {
 		log.Printf("SupervisorRegister: token generation failed: %v", err)
@@ -126,15 +122,6 @@ func SupervisorLogin(c *gin.Context) {
 			"role":       sup.Role,
 			"company_id": sup.CompanyID,
 		},
-=======
-	log.Printf("Supervisor registered successfully, id=%d", employee.ID)
-	c.JSON(http.StatusCreated, gin.H{
-		"id":         employee.ID,
-		"name":       employee.Name,
-		"email":      employee.Email,
-		"role":       employee.Role,
-		"company_id": employee.CompanyID,
->>>>>>> main
 	})
 }
 
@@ -177,20 +164,14 @@ func GetWorkerAvailability(c *gin.Context) {
 	c.JSON(http.StatusOK, workers)
 }
 
-<<<<<<< HEAD
 // GetShiftsByCompany returns shifts for a supervisor's company, optionally filtered by status
 func GetShiftsByCompany(c *gin.Context) {
-=======
-// GetShiftsCreatedBySupervisor returns shifts created by a supervisor (by path param employee_id)
-func GetShiftsCreatedBySupervisor(c *gin.Context) {
->>>>>>> main
 	empParam := c.Param("employee_id")
 	if empParam == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "employee_id path parameter is required"})
 		return
 	}
 
-<<<<<<< HEAD
 	statusParam := c.Query("status")
 	
 	// Validate status against the supported set
@@ -208,8 +189,6 @@ func GetShiftsCreatedBySupervisor(c *gin.Context) {
 		}
 	}
 
-=======
->>>>>>> main
 	empID64, err := strconv.ParseUint(empParam, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid employee_id"})
@@ -217,16 +196,10 @@ func GetShiftsCreatedBySupervisor(c *gin.Context) {
 	}
 
 	svc := services.SupervisorService{}
-<<<<<<< HEAD
 	
 	shifts, err := svc.GetShiftsByCompany(uint(empID64), statusParam)
 	if err != nil {
 		log.Printf("GetShiftsByCompany: service error: %v", err)
-=======
-	shifts, err := svc.GetShiftsCreatedBySupervisor(uint(empID64))
-	if err != nil {
-		log.Printf("GetShiftsCreatedBySupervisor: service error: %v", err)
->>>>>>> main
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
 			return
@@ -236,8 +209,4 @@ func GetShiftsCreatedBySupervisor(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, shifts)
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> main

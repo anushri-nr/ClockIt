@@ -2,10 +2,7 @@ package routes
 
 import (
 	"clockit/backend/controllers"
-<<<<<<< HEAD
 	"clockit/backend/services"
-=======
->>>>>>> main
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +12,6 @@ func RegisterRoutes(r *gin.Engine) {
 	supervisorRoutes := r.Group("/api/supervisors")
 	{
 		supervisorRoutes.POST("/register", controllers.SupervisorRegister)
-<<<<<<< HEAD
 		supervisorRoutes.POST("/login", controllers.SupervisorLogin)
 		// protected endpoints - require authentication and supervisor role
 		supervisorRoutes.GET("/workers/availability", 
@@ -28,16 +24,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(), 
 			controllers.GetShiftsByCompany,
 		)
-=======
-		supervisorRoutes.GET("/workers/availability", controllers.GetWorkerAvailability)
-		supervisorRoutes.GET("/:employee_id/shifts", controllers.GetShiftsCreatedBySupervisor)
->>>>>>> main
 	}
 
 	workerRoutes := r.Group("/api/workers")
 	{
 		workerRoutes.POST("/register", controllers.WorkerRegister)
-<<<<<<< HEAD
 		workerRoutes.POST("/login", controllers.WorkerLogin)
 		workerRoutes.GET("/:employee_id/shifts",
 			services.JWTAuthMiddleware(),
@@ -49,14 +40,10 @@ func RegisterRoutes(r *gin.Engine) {
 			services.WorkerAuthorizationMiddleware(),
 			controllers.CreateAvailability,
 		)
-=======
-		workerRoutes.GET(":employee_id/shifts", controllers.GetShiftsForWorker)
->>>>>>> main
 	}
 
 	shiftRoutes := r.Group("/api/shifts")
 	{
-<<<<<<< HEAD
 		// We add both middlewares to ensure only logged-in supervisors can touch shifts
 		shiftRoutes.POST("/create",
 			services.JWTAuthMiddleware(),
@@ -68,10 +55,6 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.AssignWorkerToShift,
 		)
-=======
-		shiftRoutes.POST("/create", controllers.CreateShift)
-		shiftRoutes.POST("/assign", controllers.AssignWorkerToShift)
->>>>>>> main
 	}
 
 	companyRoutes := r.Group("/api/companies")

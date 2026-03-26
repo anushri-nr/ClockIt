@@ -66,7 +66,6 @@ type CreatedShiftsResponse struct {
 
 type SupervisorService struct{}
 
-<<<<<<< HEAD
 // GetShiftsByCompany returns all shifts for a supervisor's company, optionally filtered by status
 func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter string) ([]CreatedShiftsResponse, error) {
 	var sup models.Employee
@@ -106,29 +105,6 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	var shifts []models.Shift
 	if err := query.Find(&shifts).Error; err != nil {
 		log.Printf("GetShiftsByCompany: DB query failed: %v", err)
-=======
-// GetShiftsCreatedBySupervisor returns all shifts created by a supervisor
-func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]CreatedShiftsResponse, error) {
-	// validate supervisor exists and role
-	var sup models.Employee
-	if err := database.DB.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("GetShiftsCreatedBySupervisor: supervisor not found: %v", err)
-			return []CreatedShiftsResponse{}, gorm.ErrRecordNotFound
-		}
-		log.Printf("GetShiftsCreatedBySupervisor: DB error validating supervisor: %v", err)
-		return []CreatedShiftsResponse{}, err
-	}
-
-	var shifts []models.Shift
-	if err := database.DB.Where("created_by = ?", supervisorID).
-		Preload("Creator").
-		Preload("Assignments").
-		Preload("Assignments.Employee").
-		Preload("Assignments.Assignee").
-		Find(&shifts).Error; err != nil {
-		log.Printf("GetShiftsCreatedBySupervisor: DB query failed: %v", err)
->>>>>>> main
 		return []CreatedShiftsResponse{}, err
 	}
 
@@ -136,14 +112,10 @@ func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]C
 	for _, sft := range shifts {
 		var assignedBy uint
 		var assignedTo string
-<<<<<<< HEAD
 		
 		// Use the new Enum as the default string
 		status := string(models.StatusUnassigned) 
 
-=======
-		var status string
->>>>>>> main
 		if len(sft.Assignments) > 0 {
 			a := sft.Assignments[0]
 			assignedBy = a.AssigneeID
@@ -163,18 +135,8 @@ func (s *SupervisorService) GetShiftsCreatedBySupervisor(supervisorID uint) ([]C
 			AssignedTo: assignedTo,
 			Status:     status,
 		}
-<<<<<<< HEAD
 		resp = append(resp, sc)
 	}
 
 	return resp, nil
 }
-=======
-
-		resp = append(resp, sc)
-	}
-
-	log.Printf("GetShiftsCreatedBySupervisor: returning %d shifts for supervisor=%d", len(resp), supervisorID)
-	return resp, nil
-}
->>>>>>> main
