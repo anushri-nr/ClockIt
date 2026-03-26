@@ -14,7 +14,6 @@ func CreateShift(c *gin.Context) {
 	type Req struct {
 		StartTime string `json:"start_time" binding:"required"`
 		EndTime   string `json:"end_time" binding:"required"`
-		CreatedBy uint   `json:"created_by" binding:"required"`
 	}
 
 	var req Req
@@ -23,6 +22,19 @@ func CreateShift(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
 		return
 	}
+
+	// Extract the ID directly from the validated JWT Token
+	authIDVal, exists := c.Get(services.ContextEmployeeID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	authID, ok := authIDVal.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	createdBy := authID
 
 	// Parse timestamps (ISO 8601 format)
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
@@ -39,9 +51,9 @@ func CreateShift(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, req.CreatedBy)
+	log.Printf("Creating shift: start=%s, end=%s, creator=%d", req.StartTime, req.EndTime, createdBy)
 
-	shift, err := services.CreateShift(startTime, endTime, req.CreatedBy)
+	shift, err := services.CreateShift(startTime, endTime, createdBy)
 	if err != nil {
 		log.Printf("Failed to create shift: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

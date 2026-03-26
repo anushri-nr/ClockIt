@@ -58,11 +58,10 @@ export class SupervisorService {
 
   // 3. ASSIGN WORKER TO SHIFT
   // Backend Route: POST /api/shifts/assign
-  assignWorker(shiftId: number, workerId: number, assignedBy: number): Observable<any> {
+  assignWorker(shiftId: number, workerId: number): Observable<any> {
     const payload = {
       shift_id: shiftId,
       employee_id: workerId,
-      assigned_by: assignedBy
     };
     // Note: The route is actually under 'shifts', not 'supervisors'
     // So we use a different base URL for this specific call

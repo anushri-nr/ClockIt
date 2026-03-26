@@ -16,9 +16,9 @@ describe('AuthService', () => {
         provideHttpClientTesting()
       ]
     });
+    localStorage.clear(); // Start fresh each time
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
-    localStorage.clear(); // Start fresh each time
   });
 
   afterEach(() => {
