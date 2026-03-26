@@ -117,3 +117,224 @@
   }
 
   button mat-icon { color: white; }
+
+  .weekly-card {
+    padding: 24px;
+    border-radius: 24px !important;
+    background: linear-gradient(180deg, #fffdf9 0%, #f7f2ea 100%) !important;
+    border: 1px solid rgba(15, 95, 92, 0.08);
+    box-shadow: 0 14px 30px rgba(31, 35, 40, 0.08) !important;
+  }
+
+  .weekly-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .weekly-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2328;
+  }
+
+  .weekly-sub {
+    font-size: 0.9rem;
+    color: #5a6472;
+  }
+
+  .weekly-total {
+    text-align: right;
+  }
+
+  .weekly-hours {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f5f5c;
+  }
+
+  .weekly-target {
+    font-size: 0.9rem;
+    color: #5a6472;
+    font-weight: 600;
+  }
+
+  .weekly-progress {
+    height: 10px;
+    background: rgba(15, 95, 92, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .weekly-progress-bar {
+    height: 100%;
+    background: linear-gradient(135deg, #0f5f5c 0%, #1f7a74 100%);
+    border-radius: 999px;
+    transition: width 250ms ease;
+  }
+
+  .weekly-days {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 14px;
+  }
+
+  .weekly-day {
+    padding: 12px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 95, 92, 0.06);
+  }
+
+  .day-label {
+    font-weight: 700;
+    color: #1f2328;
+    letter-spacing: 0.04em;
+  }
+
+  .day-date {
+    font-size: 0.8rem;
+    color: #7b8594;
+    margin-bottom: 6px;
+  }
+
+  .day-hours {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #144e4b;
+    margin-bottom: 8px;
+  }
+
+  .day-track {
+    height: 6px;
+    background: rgba(15, 95, 92, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .day-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #f4b34d 0%, #e5923c 100%);
+    border-radius: 999px;
+    transition: width 250ms ease;
+  }
+
+  .shift-meta {
+    margin-top: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .shift-chip {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+
+  .shift-by {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .upcoming-card {
+    padding: 24px;
+    border-radius: 24px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 95, 92, 0.08);
+    box-shadow: 0 14px 30px rgba(31, 35, 40, 0.08) !important;
+  }
+
+  .upcoming-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .upcoming-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(15, 95, 92, 0.06), rgba(15, 95, 92, 0.02));
+    border: 1px solid rgba(15, 95, 92, 0.08);
+  }
+
+  .upcoming-date {
+    text-align: center;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #0f5f5c;
+    color: #ffffff;
+    min-width: 64px;
+  }
+
+  .upcoming-day {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .upcoming-date-num {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .upcoming-month {
+    font-size: 0.75rem;
+    opacity: 0.85;
+  }
+
+  .upcoming-time {
+    font-weight: 700;
+    color: #1f2328;
+  }
+
+  .upcoming-meta {
+    color: #5a6472;
+    font-size: 0.9rem;
+  }
+
+  .upcoming-status {
+    font-weight: 700;
+    color: #0f5f5c;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+  }
+
+  .upcoming-empty {
+    color: #5a6472;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 720px) {
+    .weekly-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .weekly-total {
+      text-align: left;
+    }
+
+    .upcoming-item {
+      grid-template-columns: 1fr;
+      align-items: flex-start;
+    }
+
+    .upcoming-date {
+      display: inline-block;
+    }
+  }
