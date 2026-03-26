@@ -74,6 +74,7 @@ func RegisterEmployee(name, email, password, address, phone string, companyID ui
 	log.Printf("RegisterEmployee: employee created, id=%d", employee.ID)
 	return &employee, nil
 }
+<<<<<<< HEAD
 
 // FindEmployeeByEmailAndRole fetches an employee matching email and role
 func FindEmployeeByEmailAndRole(email string, role models.EmployeeRole, dst *models.Employee) error {
@@ -82,3 +83,5 @@ func FindEmployeeByEmailAndRole(email string, role models.EmployeeRole, dst *mod
 	}
 	return nil
 }
+=======
+>>>>>>> main

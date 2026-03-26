@@ -19,6 +19,7 @@ export class AuthService {
 
   private apiUrl = 'http://localhost:8080/api';
 
+<<<<<<< HEAD
   // 2. The Single Source of Truth for the logged-in user
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -71,6 +72,20 @@ export class AuthService {
   }
 
   register(user: any): Observable<boolean> {
+=======
+  constructor(private http: HttpClient) { }
+
+  
+  login(email: string, password: string, role: string): Observable<boolean> {
+    
+    console.log(`Attempting login for ${email}, ${password} as ${role}`);
+    
+    return of(true).pipe(delay(1000)); 
+  }
+
+  register(user: any): Observable<any> {
+
+>>>>>>> main
     const backendPayload = {
       name: user.name,
       email: user.email,
@@ -82,10 +97,16 @@ export class AuthService {
       wage: 15.00
     };
 
+<<<<<<< HEAD
+=======
+    console.log('Sending to Backend:', backendPayload);
+
+>>>>>>> main
     const endpoint = user.role.toLowerCase() === 'supervisor'
       ? `${this.apiUrl}/supervisors/register`
       : `${this.apiUrl}/workers/register`;
 
+<<<<<<< HEAD
     return this.http.post<any>(endpoint, backendPayload).pipe(
       tap(response => this.handleAuthResponse(response)),
       map(() => true),
@@ -98,5 +119,21 @@ export class AuthService {
 
   getCompanies(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/companies/`);
+=======
+    return this.http.post(endpoint, backendPayload);
+
+    // return of(true).pipe(delay(1000));
+  }
+
+  getCompanies(): Observable<any[]> {
+    const dummyCompanies = [
+      { id: 1, name: 'Google' },
+      { id: 2, name: 'Microsoft' },
+      { id: 3, name: 'UF' },
+      { id: 4, name: 'Chick-fil-A' },
+    ];
+    console.log('SERVICE: getCompanies called. Returning data in 1s...');
+    return of(dummyCompanies).pipe(delay(1000));
+>>>>>>> main
   }
 }
