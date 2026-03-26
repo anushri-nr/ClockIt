@@ -17,23 +17,27 @@
       <mat-card class="stat-card highlight-card">
         <ng-container *ngIf="nextShift; else noShift">
           <mat-card-header>
-            <mat-card-subtitle>Next Shift</mat-card-subtitle>
+            <mat-card-subtitle>Next Assigned Shift</mat-card-subtitle>
             <mat-card-title>
               {{ nextShift.start_time | date:'EEEE, h:mm a' }}
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <p>Main Store • {{ nextShift.start_time | date:'MMM d' }}</p>
+            <div class="shift-meta">
+              <span class="shift-chip">Assigned</span>
+              <span class="shift-by">Supervisor #{{ nextShift.assigned_by }}</span>
+            </div>
           </mat-card-content>
         </ng-container>
         
         <ng-template #noShift>
           <mat-card-header>
-            <mat-card-subtitle>Next Shift</mat-card-subtitle>
-            <mat-card-title>No upcoming shifts</mat-card-title>
+            <mat-card-subtitle>Next Assigned Shift</mat-card-subtitle>
+            <mat-card-title>No assigned shifts</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <p>Check back later for assignments.</p>
+            <p>Waiting on supervisor assignment.</p>
           </mat-card-content>
         </ng-template>
 
@@ -58,6 +62,64 @@
         </div>
         <div class="big-number">{{ estEarnings | currency }}</div>
         <div class="sub-text">Pending Approval</div>
+      </mat-card>
+    </div>
+
+    <div class="grid-section">
+      <h2>Weekly Hours Assigned</h2>
+      <mat-card class="weekly-card">
+        <div class="weekly-header">
+          <div>
+            <div class="weekly-title">Week of {{ weekRangeLabel }}</div>
+            <div class="weekly-sub">Assigned hours summary</div>
+          </div>
+          <div class="weekly-total">
+            <div class="weekly-hours">{{ weeklyTotal | number:'1.1-1' }}</div>
+            <div class="weekly-target">of {{ weeklyTarget }} hrs</div>
+          </div>
+        </div>
+        <div class="weekly-progress">
+          <div class="weekly-progress-bar" [style.width.%]="weeklyProgress"></div>
+        </div>
+        <div class="weekly-days">
+          <div class="weekly-day" *ngFor="let day of weeklyDays">
+            <div class="day-label">{{ day.label }}</div>
+            <div class="day-date">{{ day.date | date:'MMM d' }}</div>
+            <div class="day-hours">{{ day.hours | number:'1.1-1' }} hrs</div>
+            <div class="day-track">
+              <div class="day-fill" [style.width.%]="day.percent"></div>
+            </div>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+
+    <div class="grid-section">
+      <h2>Upcoming Assigned Shifts</h2>
+      <mat-card class="upcoming-card">
+        <ng-container *ngIf="assignedShifts.length > 0; else noAssigned">
+          <div class="upcoming-list">
+            <div class="upcoming-item" *ngFor="let shift of assignedShifts | slice:0:3">
+              <div class="upcoming-date">
+                <div class="upcoming-day">{{ shift.start_time | date:'EEE' }}</div>
+                <div class="upcoming-date-num">{{ shift.start_time | date:'d' }}</div>
+                <div class="upcoming-month">{{ shift.start_time | date:'MMM' }}</div>
+              </div>
+              <div class="upcoming-info">
+                <div class="upcoming-time">
+                  {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                </div>
+                <div class="upcoming-meta">Assigned by Supervisor #{{ shift.assigned_by }}</div>
+              </div>
+              <div class="upcoming-status">Assigned</div>
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #noAssigned>
+          <div class="upcoming-empty">
+            No upcoming assigned shifts yet.
+          </div>
+        </ng-template>
       </mat-card>
     </div>
 

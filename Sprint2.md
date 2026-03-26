@@ -32,6 +32,8 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 
 ### 5. **Quality Improvements**
 - Expand backend unit test coverage
+- Implement Cypress End-to-End (E2E) tests for frontend authentication flows
+- Write Angular Unit Tests (Jasmine/Karma) for core frontend services to reach a 1:1 function ratio
 
 ---
 
@@ -43,7 +45,7 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 | #36 | Backend: Login Worker API | Complete | farcyson |
 | #37 | Backend: Authentication and Authorization | Complete | avantikahollas, farcyson |
 | #38 | Backend: Wage Calculation: Worker Functionality | Complete | farcyson |
-| #45 | Enhancement: Fix Backend Shifts API to return a sorted list | Complete | anushri-nr |
+| #45 | Enchancement: Fix Backend Shifts API to return a sorted list | Complete | anushri-nr |
 | #47 | Enhancement: Get Shifts API to have Start and End Time | Complete | avantikahollas |
 | #50 | Frontend: Pending Approval: Supervisor Dashboard | Complete | farcyson |
 | #51 | Frontend: Fix: Logged in user name must be visible on the profile | Complete | farcyson |
@@ -69,6 +71,8 @@ Sprint 2 focused on strengthening backend capabilities, improving authentication
 
 **Carryover Identified**: Worker dashboard enhancements for wage view, upcoming shifts, weekly hours, and estimated earnings are actively in progress and will continue into the next sprint if not completed in time.
 
+**Frontend Integration & Testing:** Successfully integrated JWT authentication state across the frontend using a centralized `BehaviorSubject`, and verified the entire Supervisor flow using automated Cypress E2E tests and Angular unit tests.
+
 ---
 
 ## Blockers / Challenges
@@ -84,3 +88,103 @@ No major blockers were recorded in the sprint issue list. The main remaining wor
 - Complete the in-progress worker dashboard views for wage, hours, earnings, and upcoming shifts
 - Refine approval, shift assignment, and availability experiences
 - Address remaining open issues and polish end-to-end user flows
+
+## Frontend Tests (Unit + Cypress)
+
+## Unit Tests (Frontend)
+- Added/updated unit tests for:
+  - Form validation on login/register flows
+  - Shift creation form submission validation
+  - Worker availability input validation
+  - API error state rendering in components
+
+## Cypress (E2E) Tests
+- Added/updated Cypress coverage for:
+  - Supervisor login and protected route access
+  - Create shift flow
+  - Assign worker to shift flow
+  - Worker login and availability submission flow
+  - Basic negative cases (invalid input / unauthorized access)
+
+## Backend Unit Tests Added/Updated
+
+### Controllers
+- `company_controller_test.go`
+  - `TestCreateCompany_Success`
+  - `TestCreateCompany_ValidationError`
+  - `TestListCompanies_Success`
+- `shift_controller_test.go`
+  - `TestCreateShift_Success`
+  - `TestCreateShift_InvalidStartTimeFormat`
+  - `TestAssignWorkerToShift_Success`
+  - `TestAssignWorkerToShift_MissingFields`
+- `worker_controller_test.go`
+  - `TestWorkerRegister_BadRequest_InvalidPayload`
+  - `TestWorkerRegister_Success`
+  - `TestWorkerRegister_RegisterEmployeeError_InvalidCompany`
+  - `TestWorkerLogin_BadRequest_InvalidPayload`
+  - `TestWorkerLogin_Success`
+  - `TestGetShiftsForWorker_BadRequest_InvalidEmployeeID`
+  - `TestGetShiftsForWorker_NotFound`
+  - `TestGetShiftsForWorker_Success_Empty`
+  - `TestCreateAvailability_BadRequest_InvalidEmployeeID`
+  - `TestCreateAvailability_BadRequest_InvalidBody`
+  - `TestCreateAvailability_WorkerNotFound`
+  - `TestCreateAvailability_MalformedJSON`
+- `supervisor_controller_test.go`
+  - `TestSupervisorRegister_Success`
+  - `TestSupervisorRegister_ValidationError`
+  - `TestSupervisorLogin_Success`
+  - `TestSupervisorLogin_InvalidPassword`
+  - `TestSupervisorLogin_UserNotFound`
+  - `TestGetWorkerAvailability_Success`
+  - `TestGetWorkerAvailability_InvalidDate`
+  - `TestGetShiftsByCompany_Controller_ValidationAndSuccess`
+
+### Services
+- `company_service_test.go`
+  - `TestCreateCompanyService_Success`
+  - `TestCreateCompanyService_InvalidName`
+  - `TestListCompaniesService_Success`
+- `shift_service_test.go`
+  - `TestCreateShift_Success`
+  - `TestCreateShift_SupervisorNotFound`
+  - `TestCreateShift_InvalidTimeOrder`
+  - `TestCreateShift_SameStartAndEndTime`
+  - `TestAssignWorkerToShift_Success`
+  - `TestAssignWorkerToShift_ShiftNotFound`
+  - `TestAssignWorkerToShift_WorkerNotFound`
+  - `TestAssignWorkerToShift_SupervisorNotAuthorized`
+  - `TestAssignWorkerToShift_WorkerHasWrongRole`
+- `supervisor_service_test.go`
+  - `TestSupervisorService_GetShiftsByCompany_NotFound`
+  - `TestSupervisorService_GetShiftsByCompany_Success`
+  - `TestWorkerService_GetWorkersAvailable_Success`
+  - `TestWorkerService_GetWorkersAvailable_NoResults`
+- `worker_service_test.go`
+  - `TestCreateWorkerAvailability`
+  - `TestGetAssignedShifts`
+  - `TestGetAssignedShifts_Success`
+
+
+## API Specification
+
+### Supervisor APIs (`/api/supervisors`)
+- `POST /api/supervisors/register` — Register a new supervisor account.
+- `POST /api/supervisors/login` — Authenticate supervisor and return JWT token.
+- `GET /api/supervisors/workers/availability` *(Protected: JWT + Supervisor role)* — Fetch worker availability for scheduling.
+- `GET /api/supervisors/:employee_id/shifts` *(Protected: JWT + Supervisor role)* — Fetch shifts in supervisor context.
+
+### Worker APIs (`/api/workers`)
+- `POST /api/workers/register` — Register a new worker account.
+- `POST /api/workers/login` — Authenticate worker and return JWT token.
+- `GET /api/workers/:employee_id/shifts` *(Protected: JWT + Worker role)* — Fetch assigned shifts for a worker.
+- `POST /api/workers/:employee_id/availability` *(Protected: JWT + Worker role)* — Create/update worker availability.
+
+### Shift APIs (`/api/shifts`)
+- `POST /api/shifts/create` *(Protected: JWT + Supervisor role)* — Create a new shift.
+- `POST /api/shifts/assign` *(Protected: JWT + Supervisor role)* — Assign a worker to a shift.
+
+### Company APIs (`/api/companies`)
+- `POST /api/companies/create` — Create a new company.
+- `GET /api/companies/` — List all companies.
