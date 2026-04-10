@@ -9,7 +9,52 @@ import (
 	"clockit/backend/models"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
+
+func TestReleaseShiftForWorker_Success(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "RelCo"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	sup := models.Employee{Name: "Sup", Email: "sup@rel.test", Password: "x", Role: models.RoleSupervisor, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+
+	worker := models.Employee{Name: "W", Email: "w@rel.test", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID}
+	require.NoError(t, database.DB.Create(&sft).Error)
+
+	sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned}
+	require.NoError(t, database.DB.Create(&sa).Error)
+
+	out, err := ReleaseShiftForWorker(sft.ID, worker.ID)
+	require.NoError(t, err)
+	require.NotNil(t, out)
+	require.Equal(t, models.StatusReleased, out.Status)
+
+	var persisted models.ShiftAssignment
+	require.NoError(t, database.DB.First(&persisted, sa.ID).Error)
+	require.Equal(t, models.StatusReleased, persisted.Status)
+}
+
+func TestReleaseShiftForWorker_NotFound(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "RelCo2"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	worker := models.Employee{Name: "W2", Email: "w2@rel.test", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	_, err := ReleaseShiftForWorker(9999, worker.ID)
+	require.Error(t, err)
+	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+}
 
 func createTestCompany(t *testing.T, name string) models.Company {
 	t.Helper()

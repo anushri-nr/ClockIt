@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"clockit/backend/services"
+	"errors"
 	"log"
 	"net/http"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 )
@@ -108,6 +111,48 @@ func AssignWorkerToShift(c *gin.Context) {
 		"shift_id":    assignment.ShiftID,
 		"employee_id": assignment.EmployeeID,
 		"assigned_by": assignment.AssigneeID,
+		"status":      assignment.Status,
+		"assigned_at": assignment.AssignedAt.Format(time.RFC3339),
+	})
+}
+
+// ReleaseShiftForWorker allows a worker to release a shift they were assigned to
+func ReleaseShiftForWorker(c *gin.Context) {
+	type Req struct {
+		ShiftID uint `json:"shift_id" binding:"required"`
+	}
+
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("ReleaseShiftForWorker: binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"errors": GetValidationErrors(err)})
+		return
+	}
+
+	// get authenticated employee id from JWT
+	empID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	log.Printf("Worker %d releasing shift %d", empID, req.ShiftID)
+
+	assignment, err := services.ReleaseShiftForWorker(req.ShiftID, empID)
+	if err != nil {
+		log.Printf("ReleaseShiftForWorker: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Only shifts assigned to the worker may be released"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to release assignment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":          assignment.ID,
+		"shift_id":    assignment.ShiftID,
+		"employee_id": assignment.EmployeeID,
 		"status":      assignment.Status,
 		"assigned_at": assignment.AssignedAt.Format(time.RFC3339),
 	})

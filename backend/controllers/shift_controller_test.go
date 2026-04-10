@@ -10,6 +10,8 @@ import (
 	"clockit/backend/database"
 	"clockit/backend/models"
 
+	"clockit/backend/services"
+
 	"net/http"
 	"net/http/httptest"
 
@@ -105,7 +107,12 @@ func TestCreateShift_Success(t *testing.T) {
 	seedCompanyAndUsersForShiftTests(t)
 
 	router := gin.New()
-	router.POST("/shifts", CreateShift)
+	router.POST("/shifts", func(c *gin.Context) {
+		// mimic JWT middleware: authenticated supervisor with ID 1
+		c.Set(services.ContextEmployeeID, uint(1))
+		c.Set(services.ContextEmployeeRole, string(models.RoleSupervisor))
+		CreateShift(c)
+	})
 
 	startTime := time.Now().Add(24 * time.Hour).Truncate(time.Second)
 	endTime := startTime.Add(8 * time.Hour)
@@ -132,7 +139,12 @@ func TestCreateShift_InvalidStartTimeFormat(t *testing.T) {
 	seedCompanyAndUsersForShiftTests(t)
 
 	router := gin.New()
-	router.POST("/shifts", CreateShift)
+	router.POST("/shifts", func(c *gin.Context) {
+		// mimic JWT middleware: authenticated supervisor with ID 1
+		c.Set(services.ContextEmployeeID, uint(1))
+		c.Set(services.ContextEmployeeRole, string(models.RoleSupervisor))
+		CreateShift(c)
+	})
 
 	reqBody := map[string]interface{}{
 		"start_time": "invalid-date",
@@ -202,3 +214,73 @@ func TestAssignWorkerToShift_MissingFields(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
+
+func TestReleaseShiftForWorker_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "ReleaseShiftCo"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	sup := models.Employee{ID: 1, Name: "Sup", Email: "sup@rs.test", Role: models.RoleSupervisor, CompanyID: company.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+
+	worker := models.Employee{ID: 2, Name: "Worker", Email: "worker@rs.test", Role: models.RoleWorker, CompanyID: company.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	end := start.Add(8 * time.Hour)
+	shift := models.Shift{ID: 1, StartTime: start, EndTime: end, CreatedBy: sup.ID}
+	require.NoError(t, database.DB.Create(&shift).Error)
+
+	sa := models.ShiftAssignment{ShiftID: shift.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned}
+	require.NoError(t, database.DB.Create(&sa).Error)
+
+	router := gin.New()
+	router.POST("/api/workers/shifts", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, uint(worker.ID))
+		c.Set(services.ContextEmployeeRole, string(models.RoleWorker))
+		ReleaseShiftForWorker(c)
+	})
+
+	body := map[string]uint{"shift_id": shift.ID}
+	jb, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/shifts", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var out models.ShiftAssignment
+	require.NoError(t, database.DB.First(&out, sa.ID).Error)
+	require.Equal(t, models.StatusReleased, out.Status)
+}
+
+func TestReleaseShiftForWorker_NotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "ReleaseShiftCo"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker := models.Employee{ID: 2, Name: "Worker", Email: "worker@rs.test", Role: models.RoleWorker, CompanyID: company.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	router := gin.New()
+	router.POST("/api/workers/shifts", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, uint(worker.ID))
+		c.Set(services.ContextEmployeeRole, string(models.RoleWorker))
+		ReleaseShiftForWorker(c)
+	})
+
+	body := map[string]uint{"shift_id": 9999}
+	jb, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/shifts", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+

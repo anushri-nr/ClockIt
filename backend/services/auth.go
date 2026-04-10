@@ -179,3 +179,41 @@ func ParseToken(tokenStr string) (*JWTClaims, error) {
 	}
 	return nil, jwt.ErrTokenInvalidClaims
 }
+
+// GetAuthenticatedEmployeeID extracts the authenticated employee ID from the Gin context
+// (this value is set by JWTAuthMiddleware). Returns an error if the value is missing or
+// not a supported numeric type.
+func GetAuthenticatedEmployeeID(c *gin.Context) (uint, error) {
+	v, ok := c.Get(ContextEmployeeID)
+	if !ok {
+		return 0, errors.New("missing authenticated employee id")
+	}
+
+	switch id := v.(type) {
+	case uint:
+		return id, nil
+	case int:
+		return uint(id), nil
+	case int64:
+		return uint(id), nil
+	case uint64:
+		return uint(id), nil
+	case float64:
+		return uint(id), nil
+	default:
+		return 0, errors.New("invalid authenticated employee id type")
+	}
+}
+
+// GetAuthenticatedEmployeeRole extracts the authenticated employee role from the Gin context.
+func GetAuthenticatedEmployeeRole(c *gin.Context) (string, error) {
+	v, ok := c.Get(ContextEmployeeRole)
+	if !ok {
+		return "", errors.New("missing authenticated employee role")
+	}
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return "", errors.New("invalid authenticated employee role")
+	}
+	return s, nil
+}

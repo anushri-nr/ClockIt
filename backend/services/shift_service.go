@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // CreateShift creates a new shift time slot
@@ -92,5 +94,34 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 	}
 
 	log.Printf("AssignWorkerToShift: assignment created, id=%d", assignment.ID)
+	return &assignment, nil
+}
+
+// ReleaseShiftForWorker marks an existing assignment for a worker as Released
+func ReleaseShiftForWorker(shiftID, employeeID uint) (*models.ShiftAssignment, error) {
+	log.Printf("ReleaseShiftForWorker: shift=%d, employee=%d", shiftID, employeeID)
+
+	var assignment models.ShiftAssignment
+	if err := database.DB.Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: assignment lookup error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	assignment.Status = models.StatusReleased
+
+	if err := database.DB.Save(&assignment).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: failed to update assignment: %v", err)
+		return nil, err
+	}
+
+	// Attempt to load relations; if it fails we still return the assignment
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: failed to preload relations: %v", err)
+	}
+
+	log.Printf("ReleaseShiftForWorker: assignment updated, id=%d", assignment.ID)
 	return &assignment, nil
 }

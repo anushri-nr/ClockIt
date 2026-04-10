@@ -76,7 +76,7 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		}
 
 		log.Printf("GetShiftsByCompany: DB error validating supervisor: %v", err)
-		
+
 		return []CreatedShiftsResponse{}, err
 	}
 
@@ -84,22 +84,30 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	query := database.DB.Model(&models.Shift{}).
 		Joins("JOIN employees ON employees.id = shifts.created_by").
 		Where("employees.company_id = ?", sup.CompanyID).
-		Preload("Creator").
-		Preload("Assignments").
-		Preload("Assignments.Employee").
-		Preload("Assignments.Assignee")
+		Preload("Creator")
 
 	// Only Group By when we actually execute a JOIN on assignments
 	if statusFilter != "" {
 		query = query.Joins("LEFT JOIN shift_assignments ON shift_assignments.shift_id = shifts.id").
 			Group("shifts.id")
-		
+
 		// If Unassigned, only check for IS NULL since it's not a saved DB value
 		if statusFilter == string(models.StatusUnassigned) {
 			query = query.Where("shift_assignments.id IS NULL")
+			// don't preload assignments when unassigned
 		} else {
+			// Filter shifts to those that have an assignment with the requested status
 			query = query.Where("shift_assignments.status = ?", statusFilter)
+			// Preload only assignments that match the filter, order most recent first
+			query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", statusFilter).Order("assigned_at DESC")
+			}).Preload("Assignments.Employee").Preload("Assignments.Assignee")
 		}
+	} else {
+		// No status filter: preload assignments ordered by assigned_at desc so first is latest
+		query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+			return db.Order("assigned_at DESC")
+		}).Preload("Assignments.Employee").Preload("Assignments.Assignee")
 	}
 
 	var shifts []models.Shift
@@ -112,11 +120,12 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	for _, sft := range shifts {
 		var assignedBy uint
 		var assignedTo string
-		
+
 		// Use the new Enum as the default string
-		status := string(models.StatusUnassigned) 
+		status := string(models.StatusUnassigned)
 
 		if len(sft.Assignments) > 0 {
+			// After conditional preload the first assignment is the most relevant (matching filter or latest)
 			a := sft.Assignments[0]
 			assignedBy = a.AssigneeID
 			status = string(a.Status)

@@ -322,3 +322,63 @@ func TestGetShiftsByCompany_Controller_ValidationAndSuccess(t *testing.T) {
 		t.Fatalf("expected 400 Bad Request for invalid employee id, got %d, body=%s", w3.Code, w3.Body.String())
 	}
 }
+
+func TestGetRequestedShifts_Controller_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	// create company and supervisor
+	comp := models.Company{Name: "ReqCo"}
+	if err := database.DB.Create(&comp).Error; err != nil {
+		t.Fatalf("failed to create company: %v", err)
+	}
+
+	sup, err := services.RegisterEmployee("SupReq", "supreq@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	if err != nil {
+		t.Fatalf("RegisterEmployee failed: %v", err)
+	}
+
+	// create worker and a shift with a Requested assignment
+	worker, err := services.RegisterEmployee("WReq", "wreq@example.com", "pass1234", "addr", "333", comp.ID, 9.0, models.RoleWorker)
+	if err != nil {
+		t.Fatalf("RegisterEmployee worker failed: %v", err)
+	}
+
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID, CreatedAt: time.Now()}
+	if err := database.DB.Create(&sft).Error; err != nil {
+		t.Fatalf("failed to create shift: %v", err)
+	}
+
+	sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusRequested}
+	if err := database.DB.Create(&sa).Error; err != nil {
+		t.Fatalf("failed to create shift assignment: %v", err)
+	}
+
+	// Make request and inject authenticated supervisor id into context before handler
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/requested", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/requested", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, sup.ID)
+		GetRequestedShifts(c)
+	})
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d, body=%s", w.Code, w.Body.String())
+	}
+
+	// decode response and check there's one shift with Requested status
+	var resp []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(resp) != 1 {
+		t.Fatalf("expected 1 requested shift, got %d", len(resp))
+	}
+	if fmt.Sprint(resp[0]["status"]) != string(models.StatusRequested) {
+		t.Fatalf("expected status %s, got %v", string(models.StatusRequested), resp[0]["status"])
+	}
+}
