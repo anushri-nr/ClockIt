@@ -29,6 +29,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetRequestedShifts,
 		)
+		supervisorRoutes.GET("/workers/overtime",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.GetWorkersWithOvertimeHours,
+		)
 	}
 
 	workerRoutes := r.Group("/api/workers")

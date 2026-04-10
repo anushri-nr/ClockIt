@@ -149,3 +149,41 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 
 	return resp, nil
 }
+
+type WorkerOvertimeResponse struct {
+	ID         uint    `json:"id"`
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	PhoneNo    string  `json:"phone_no"`
+	CompanyID  uint    `json:"company_id"`
+	TotalHours float64 `json:"total_hours"`
+}
+
+// GetWorkersWithOvertimeHours returns workers whose total assigned shift hours in the week exceed 20 hours.
+func (s *SupervisorService) GetWorkersWithOvertimeHours(supervisorID uint, weekStart time.Time) ([]WorkerOvertimeResponse, error) {
+	var sup models.Employee
+	if err := database.DB.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []WorkerOvertimeResponse{}, gorm.ErrRecordNotFound
+		}
+		return []WorkerOvertimeResponse{}, err
+	}
+
+	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	sql := `SELECT e.id, e.name, e.email, e.phone_no, e.company_id,
+		SUM((julianday(shifts.end_time) - julianday(shifts.start_time)) * 24.0) as total_hours
+		FROM employees e
+		JOIN shift_assignments sa ON sa.employee_id = e.id
+		JOIN shifts ON sa.shift_id = shifts.id
+		WHERE e.company_id = ? AND shifts.start_time >= ? AND shifts.start_time < ?
+		GROUP BY e.id
+		HAVING total_hours > ?`
+
+	var out []WorkerOvertimeResponse
+	if err := database.DB.Raw(sql, sup.CompanyID, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339), 20).Scan(&out).Error; err != nil {
+		return []WorkerOvertimeResponse{}, err
+	}
+
+	return out, nil
+}
