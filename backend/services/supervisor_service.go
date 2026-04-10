@@ -94,9 +94,7 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		// If Unassigned, only check for IS NULL since it's not a saved DB value
 		if statusFilter == string(models.StatusUnassigned) {
 			query = query.Where("shift_assignments.id IS NULL")
-			// don't preload assignments when unassigned
 		} else {
-			// Filter shifts to those that have an assignment with the requested status
 			query = query.Where("shift_assignments.status = ?", statusFilter)
 			// Preload only assignments that match the filter, order most recent first
 			query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
@@ -125,7 +123,6 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		status := string(models.StatusUnassigned)
 
 		if len(sft.Assignments) > 0 {
-			// After conditional preload the first assignment is the most relevant (matching filter or latest)
 			a := sft.Assignments[0]
 			assignedBy = a.AssigneeID
 			status = string(a.Status)

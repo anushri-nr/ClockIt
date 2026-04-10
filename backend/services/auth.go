@@ -181,8 +181,6 @@ func ParseToken(tokenStr string) (*JWTClaims, error) {
 }
 
 // GetAuthenticatedEmployeeID extracts the authenticated employee ID from the Gin context
-// (this value is set by JWTAuthMiddleware). Returns an error if the value is missing or
-// not a supported numeric type.
 func GetAuthenticatedEmployeeID(c *gin.Context) (uint, error) {
 	v, ok := c.Get(ContextEmployeeID)
 	if !ok {

@@ -117,7 +117,7 @@ func ReleaseShiftForWorker(shiftID, employeeID uint) (*models.ShiftAssignment, e
 		return nil, err
 	}
 
-	// Attempt to load relations; if it fails we still return the assignment
+	// Attempt to load relations. If it fails, we still return the assignment
 	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
 		log.Printf("ReleaseShiftForWorker: failed to preload relations: %v", err)
 	}

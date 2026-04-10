@@ -160,12 +160,11 @@ func TestSupervisorService_GetWorkersWithOvertimeHours_Success(t *testing.T) {
 		t.Fatalf("RegisterEmployee worker failed: %v", err)
 	}
 
-	// compute weekStart same way the controller/service expects (Sunday 00:00)
 	now := time.Now()
 	weekday := int(now.Weekday())
 	weekStart := time.Date(now.Year(), now.Month(), now.Day()-weekday, 0, 0, 0, 0, now.Location())
 
-	// create 3 shifts of 8 hours within the week => total 24 hours > 20
+	// create 3 shifts of 8 hours within the week
 	for i := 1; i <= 3; i++ {
 		start := weekStart.Add(time.Duration(i) * 24 * time.Hour)
 		end := start.Add(8 * time.Hour)
