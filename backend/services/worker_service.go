@@ -4,7 +4,6 @@ import (
 	"clockit/backend/database"
 	"clockit/backend/models"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -127,54 +126,4 @@ func (s *WorkerService) GetReleasedShiftsByEmployeeCompany(employeeID uint) ([]m
 	}
 
 	return shifts, nil
-}
-
-// RequestReleasedShift lets a worker request a released shift.
-// It updates shift.status -> requested and creates/updates shift_assignments.
-func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, error) {
-	var out models.ShiftAssignment
-
-	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		var worker models.Employee
-		if err := tx.Where("id = ? AND role = ?", workerID, models.RoleWorker).First(&worker).Error; err != nil {
-			return err
-		}
-
-		// find released assignment row for this shift
-		var a models.ShiftAssignment
-		if err := tx.
-			Where("shift_id = ? AND status = ?", shiftID, models.StatusReleased).
-			First(&a).Error; err != nil {
-			return err
-		}
-
-		// optional: ensure shift belongs to worker company
-		var shift models.Shift
-		if err := tx.First(&shift, shiftID).Error; err != nil {
-			return err
-		}
-		var creator models.Employee
-		if err := tx.First(&creator, shift.CreatedBy).Error; err != nil {
-			return err
-		}
-		if creator.CompanyID != worker.CompanyID {
-			return fmt.Errorf("shift is not from worker company")
-		}
-
-		// update assignment -> requested by this worker
-		a.EmployeeID = workerID
-		a.Status = models.StatusRequested
-		a.AssignedAt = time.Now().UTC()
-		if err := tx.Save(&a).Error; err != nil {
-			return err
-		}
-
-		out = a
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	return &out, nil
 }

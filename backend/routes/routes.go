@@ -39,11 +39,6 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetAssignedShifts,
 		)
-		supervisorRoutes.PATCH("/shifts/:shift_id/reject",
-			services.JWTAuthMiddleware(),
-			services.SupervisorAuthorizationMiddleware(),
-			controllers.RejectShiftRequest,
-		)
 	}
 
 	workerRoutes := r.Group("/api/workers")
@@ -65,11 +60,6 @@ func RegisterRoutes(r *gin.Engine) {
 			services.WorkerAuthorizationMiddleware(),
 			controllers.GetReleasedShiftsForWorkerCompany,
 		)
-		workerRoutes.POST("/shifts/:shift_id/request",
-			services.JWTAuthMiddleware(),
-			services.WorkerAuthorizationMiddleware(),
-			controllers.RequestShift,
-		)
 	}
 
 	shiftRoutes := r.Group("/api/shifts")
@@ -89,6 +79,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.ReleaseShiftForWorker,
+		)
+		supervisorRoutes.PATCH("/shifts/:shift_id/reject",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.RejectShiftRequest,
+		)
+		workerRoutes.POST("/shifts/:shift_id/request",
+			services.JWTAuthMiddleware(),
+			services.WorkerAuthorizationMiddleware(),
+			controllers.RequestShift,
 		)
 	}
 
