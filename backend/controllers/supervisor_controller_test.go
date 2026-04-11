@@ -16,6 +16,7 @@ import (
 	"clockit/backend/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestDB(t *testing.T) string {
@@ -381,6 +382,72 @@ func TestGetRequestedShifts_Controller_Success(t *testing.T) {
 	if fmt.Sprint(resp[0]["status"]) != string(models.StatusRequested) {
 		t.Fatalf("expected status %s, got %v", string(models.StatusRequested), resp[0]["status"])
 	}
+}
+
+func TestGetAssignedShifts_Unauthorized(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    r := gin.New()
+    r.GET("/api/supervisors/shifts/assigned", GetAssignedShifts)
+
+    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+    w := httptest.NewRecorder()
+    r.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetAssignedShifts_SupervisorNotFound(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    r := gin.New()
+    r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+        // mimic auth middleware context
+        c.Set("employee_id", uint(999999))
+        GetAssignedShifts(c)
+    })
+
+    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+    w := httptest.NewRecorder()
+    r.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetAssignedShifts_Success_Empty(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    company := models.Company{Name: "Assigned Shift Co"}
+    require.NoError(t, database.DB.Create(&company).Error)
+
+    supervisor := models.Employee{
+        Name:      "Sup A",
+        Email:     "sup.assigned@test.local",
+        Password:  "hashed-or-dummy",
+        Role:      models.RoleSupervisor,
+        CompanyID: company.ID,
+        Wage:      40,
+    }
+    require.NoError(t, database.DB.Create(&supervisor).Error)
+
+    r := gin.New()
+    r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+        c.Set("employee_id", supervisor.ID)
+        GetAssignedShifts(c)
+    })
+
+    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+    w := httptest.NewRecorder()
+    r.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusOK, w.Code)
+
+    var resp []map[string]interface{}
+    require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+    require.NotNil(t, resp) // can be empty, but valid JSON array
 }
 
 func TestGetWorkersWithOvertimeHours_Controller_Success(t *testing.T) {
