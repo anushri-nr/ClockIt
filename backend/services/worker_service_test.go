@@ -3,6 +3,7 @@ package services
 import (
     "errors"
     "testing"
+    "time"
 
     "clockit/backend/database"
     "clockit/backend/models"
@@ -20,9 +21,21 @@ func setupWorkerServiceDB(t *testing.T) {
 
     database.DB = db
     require.NoError(t, database.DB.AutoMigrate(
+        &models.Company{},
         &models.Employee{},
         &models.WorkerAvailability{},
+        &models.Shift{},
+        &models.ShiftAssignment{},
     ))
+
+    t.Cleanup(func() {
+        if database.DB != nil {
+            if sqlDB, err := database.DB.DB(); err == nil {
+                _ = sqlDB.Close()
+            }
+            database.DB = nil
+        }
+    })
 }
 
 func TestCreateWorkerAvailability(t *testing.T) {
@@ -107,4 +120,129 @@ func TestGetAssignedShifts(t *testing.T) {
         require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
         require.Len(t, got, 0)
     })
+}
+
+func TestGetReleasedShiftsByEmployeeCompany_Success(t *testing.T) {
+    setupWorkerServiceDB(t)
+
+    companyA := models.Company{Name: "A"}
+    companyB := models.Company{Name: "B"}
+    require.NoError(t, database.DB.Create(&companyA).Error)
+    require.NoError(t, database.DB.Create(&companyB).Error)
+
+    worker := models.Employee{
+        Name: "Worker", Email: "worker.rel@test.local", Role: models.RoleWorker, CompanyID: companyA.ID, Wage: 20,
+    }
+    supA := models.Employee{
+        Name: "SupA", Email: "supa.rel@test.local", Role: models.RoleSupervisor, CompanyID: companyA.ID, Wage: 40,
+    }
+    supB := models.Employee{
+        Name: "SupB", Email: "supb.rel@test.local", Role: models.RoleSupervisor, CompanyID: companyB.ID, Wage: 40,
+    }
+    require.NoError(t, database.DB.Create(&worker).Error)
+    require.NoError(t, database.DB.Create(&supA).Error)
+    require.NoError(t, database.DB.Create(&supB).Error)
+
+    now := time.Now().UTC()
+    shiftKeep := models.Shift{StartTime: now.Add(1 * time.Hour), EndTime: now.Add(9 * time.Hour), CreatedBy: supA.ID}
+    shiftDropStatus := models.Shift{StartTime: now.Add(2 * time.Hour), EndTime: now.Add(10 * time.Hour), CreatedBy: supA.ID}
+    shiftDropCompany := models.Shift{StartTime: now.Add(3 * time.Hour), EndTime: now.Add(11 * time.Hour), CreatedBy: supB.ID}
+    require.NoError(t, database.DB.Create(&shiftKeep).Error)
+    require.NoError(t, database.DB.Create(&shiftDropStatus).Error)
+    require.NoError(t, database.DB.Create(&shiftDropCompany).Error)
+
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID: shiftKeep.ID, EmployeeID: worker.ID, Status: models.StatusReleased, AssignedAt: now,
+    }).Error)
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID: shiftDropStatus.ID, EmployeeID: worker.ID, Status: models.StatusAssigned, AssignedAt: now,
+    }).Error)
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID: shiftDropCompany.ID, EmployeeID: worker.ID, Status: models.StatusReleased, AssignedAt: now,
+    }).Error)
+
+    svc := WorkerService{}
+    got, err := svc.GetReleasedShiftsByEmployeeCompany(worker.ID)
+    require.NoError(t, err)
+    require.Len(t, got, 1)
+    require.Equal(t, shiftKeep.ID, got[0].ID)
+}
+
+func TestRequestReleasedShift_Success(t *testing.T) {
+    setupWorkerServiceDB(t)
+
+    company := models.Company{Name: "Req Co"}
+    require.NoError(t, database.DB.Create(&company).Error)
+
+    worker := models.Employee{
+        Name: "WorkerReq", Email: "worker.req@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 22,
+    }
+    supervisor := models.Employee{
+        Name: "SupReq", Email: "sup.req@test.local", Role: models.RoleSupervisor, CompanyID: company.ID, Wage: 45,
+    }
+    require.NoError(t, database.DB.Create(&worker).Error)
+    require.NoError(t, database.DB.Create(&supervisor).Error)
+
+    now := time.Now().UTC()
+    shift := models.Shift{
+        StartTime: now.Add(24 * time.Hour),
+        EndTime:   now.Add(32 * time.Hour),
+        CreatedBy: supervisor.ID,
+    }
+    require.NoError(t, database.DB.Create(&shift).Error)
+
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID:    shift.ID,
+        EmployeeID: worker.ID,
+        AssigneeID: supervisor.ID,
+        Status:     models.StatusReleased,
+        AssignedAt: now,
+    }).Error)
+
+    out, err := RequestReleasedShift(worker.ID, shift.ID)
+    require.NoError(t, err)
+    require.NotNil(t, out)
+    require.Equal(t, models.StatusRequested, out.Status)
+    require.Equal(t, worker.ID, out.EmployeeID)
+
+    var dbRow models.ShiftAssignment
+    require.NoError(t, database.DB.Where("shift_id = ?", shift.ID).First(&dbRow).Error)
+    require.Equal(t, models.StatusRequested, dbRow.Status)
+    require.Equal(t, worker.ID, dbRow.EmployeeID)
+}
+
+func TestRequestReleasedShift_NotReleased(t *testing.T) {
+    setupWorkerServiceDB(t)
+
+    company := models.Company{Name: "Req Co 2"}
+    require.NoError(t, database.DB.Create(&company).Error)
+
+    worker := models.Employee{
+        Name: "Worker2", Email: "worker2.req@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 22,
+    }
+    supervisor := models.Employee{
+        Name: "Sup2", Email: "sup2.req@test.local", Role: models.RoleSupervisor, CompanyID: company.ID, Wage: 45,
+    }
+    require.NoError(t, database.DB.Create(&worker).Error)
+    require.NoError(t, database.DB.Create(&supervisor).Error)
+
+    now := time.Now().UTC()
+    shift := models.Shift{
+        StartTime: now.Add(24 * time.Hour),
+        EndTime:   now.Add(32 * time.Hour),
+        CreatedBy: supervisor.ID,
+    }
+    require.NoError(t, database.DB.Create(&shift).Error)
+
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID:    shift.ID,
+        EmployeeID: worker.ID,
+        AssigneeID: supervisor.ID,
+        Status:     models.StatusAssigned, // not released
+        AssignedAt: now,
+    }).Error)
+
+    out, err := RequestReleasedShift(worker.ID, shift.ID)
+    require.Error(t, err)
+    require.Nil(t, out)
 }

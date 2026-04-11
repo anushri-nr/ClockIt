@@ -55,6 +55,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.WorkerAuthorizationMiddleware(),
 			controllers.CreateAvailability,
 		)
+		workerRoutes.GET("/shifts/released",
+			services.JWTAuthMiddleware(),
+			services.WorkerAuthorizationMiddleware(),
+			controllers.GetReleasedShiftsForWorkerCompany,
+		)
+		workerRoutes.POST("/shifts/:shift_id/request",
+			services.JWTAuthMiddleware(),
+			services.WorkerAuthorizationMiddleware(),
+			controllers.RequestShift,
+		)
 	}
 
 	shiftRoutes := r.Group("/api/shifts")

@@ -7,6 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"fmt"
+	"time"
+
 	"clockit/backend/database"
 	"clockit/backend/models"
 	"clockit/backend/services"
@@ -280,4 +283,135 @@ func TestWorkerLogin_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	require.NotEmpty(t, resp["token"])
 	require.NotNil(t, resp["employee"])
+}
+
+func TestGetReleasedShiftsForWorkerCompany_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	router := gin.New()
+	router.GET("/api/workers/shifts/released", GetReleasedShiftsForWorkerCompany)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/shifts/released", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetReleasedShiftsForWorkerCompany_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	company := models.Company{Name: "Test Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker := models.Employee{
+		Name:      "Worker One",
+		Email:     "worker.released@test.local",
+		Password:  "password123",
+		Role:      models.RoleWorker,
+		CompanyID: company.ID,
+		Wage:      20,
+	}
+	supervisor := models.Employee{
+		Name:      "Supervisor One",
+		Email:     "supervisor.released@test.local",
+		Password:  "password123",
+		Role:      models.RoleSupervisor,
+		CompanyID: company.ID,
+		Wage:      40,
+	}
+	require.NoError(t, database.DB.Create(&worker).Error)
+	require.NoError(t, database.DB.Create(&supervisor).Error)
+
+	start := time.Now().UTC().Add(2 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	shift := models.Shift{
+		StartTime: start,
+		EndTime:   end,
+		CreatedBy: supervisor.ID,
+	}
+	require.NoError(t, database.DB.Create(&shift).Error)
+
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID:    shift.ID,
+		EmployeeID: worker.ID,
+		AssigneeID: supervisor.ID,
+		Status:     models.StatusReleased,
+		AssignedAt: time.Now().UTC(),
+	}).Error)
+
+	router := gin.New()
+	router.GET("/api/workers/shifts/released", func(c *gin.Context) {
+		c.Set("employee_id", worker.ID)
+		GetReleasedShiftsForWorkerCompany(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/shifts/released", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRequestShift_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	company := models.Company{Name: "Request Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker := models.Employee{
+		Name:      "Worker Req",
+		Email:     "worker.request@test.local",
+		Password:  "password123",
+		Role:      models.RoleWorker,
+		CompanyID: company.ID,
+		Wage:      22,
+	}
+	supervisor := models.Employee{
+		Name:      "Supervisor Req",
+		Email:     "supervisor.request@test.local",
+		Password:  "password123",
+		Role:      models.RoleSupervisor,
+		CompanyID: company.ID,
+		Wage:      45,
+	}
+	require.NoError(t, database.DB.Create(&worker).Error)
+	require.NoError(t, database.DB.Create(&supervisor).Error)
+
+	start := time.Now().UTC().Add(24 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	shift := models.Shift{
+		StartTime: start,
+		EndTime:   end,
+		CreatedBy: supervisor.ID,
+	}
+	require.NoError(t, database.DB.Create(&shift).Error)
+
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID:    shift.ID,
+		EmployeeID: worker.ID,
+		AssigneeID: supervisor.ID,
+		Status:     models.StatusReleased,
+		AssignedAt: time.Now().UTC(),
+	}).Error)
+
+	router := gin.New()
+	router.POST("/api/workers/shifts/:shift_id/request", func(c *gin.Context) {
+		c.Set("employee_id", worker.ID)
+		RequestShift(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/workers/shifts/%d/request", shift.ID), nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var updated models.ShiftAssignment
+	require.NoError(t, database.DB.Where("shift_id = ?", shift.ID).First(&updated).Error)
+	require.Equal(t, models.StatusRequested, updated.Status)
+	require.Equal(t, worker.ID, updated.EmployeeID)
 }

@@ -275,3 +275,52 @@ func CreateAvailability(c *gin.Context) {
 		"created_at": availability.CreatedAt.Format(time.RFC3339),
 	})
 }
+
+// RequestShift lets an authenticated worker request a released shift.
+func RequestShift(c *gin.Context) {
+    workerID, err := services.GetAuthenticatedEmployeeID(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+        return
+    }
+
+    shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+        return
+    }
+
+    assignment, err := services.RequestReleasedShift(workerID, uint(shiftID64))
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "worker or released shift not found"})
+            return
+        }
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, assignment)
+}
+
+// GetReleasedShiftsForWorkerCompany returns all released shifts in the authenticated worker's company.
+func GetReleasedShiftsForWorkerCompany(c *gin.Context) {
+    workerID, err := services.GetAuthenticatedEmployeeID(c)
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+        return
+    }
+
+    svc := services.WorkerService{}
+    shifts, err := svc.GetReleasedShiftsByEmployeeCompany(workerID)
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch released shifts"})
+        return
+    }
+
+    c.JSON(http.StatusOK, shifts)
+}
