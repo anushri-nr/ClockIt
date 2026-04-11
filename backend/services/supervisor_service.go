@@ -76,7 +76,7 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		}
 
 		log.Printf("GetShiftsByCompany: DB error validating supervisor: %v", err)
-		
+
 		return []CreatedShiftsResponse{}, err
 	}
 
@@ -84,22 +84,28 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	query := database.DB.Model(&models.Shift{}).
 		Joins("JOIN employees ON employees.id = shifts.created_by").
 		Where("employees.company_id = ?", sup.CompanyID).
-		Preload("Creator").
-		Preload("Assignments").
-		Preload("Assignments.Employee").
-		Preload("Assignments.Assignee")
+		Preload("Creator")
 
 	// Only Group By when we actually execute a JOIN on assignments
 	if statusFilter != "" {
 		query = query.Joins("LEFT JOIN shift_assignments ON shift_assignments.shift_id = shifts.id").
 			Group("shifts.id")
-		
+
 		// If Unassigned, only check for IS NULL since it's not a saved DB value
 		if statusFilter == string(models.StatusUnassigned) {
 			query = query.Where("shift_assignments.id IS NULL")
 		} else {
 			query = query.Where("shift_assignments.status = ?", statusFilter)
+			// Preload only assignments that match the filter, order most recent first
+			query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+				return db.Where("status = ?", statusFilter).Order("assigned_at DESC")
+			}).Preload("Assignments.Employee").Preload("Assignments.Assignee")
 		}
+	} else {
+		// No status filter: preload assignments ordered by assigned_at desc so first is latest
+		query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+			return db.Order("assigned_at DESC")
+		}).Preload("Assignments.Employee").Preload("Assignments.Assignee")
 	}
 
 	var shifts []models.Shift
@@ -112,9 +118,9 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	for _, sft := range shifts {
 		var assignedBy uint
 		var assignedTo string
-		
+
 		// Use the new Enum as the default string
-		status := string(models.StatusUnassigned) 
+		status := string(models.StatusUnassigned)
 
 		if len(sft.Assignments) > 0 {
 			a := sft.Assignments[0]
@@ -139,4 +145,43 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	}
 
 	return resp, nil
+}
+
+type WorkerOvertimeResponse struct {
+	ID         uint    `json:"id"`
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	PhoneNo    string  `json:"phone_no"`
+	CompanyID  uint    `json:"company_id"`
+	TotalHours float64 `json:"total_hours"`
+}
+
+// GetWorkersWithOvertimeHours returns workers whose total assigned shift hours in the week exceed 20 hours.
+func (s *SupervisorService) GetWorkersWithOvertimeHours(supervisorID uint, weekStart time.Time) ([]WorkerOvertimeResponse, error) {
+	var sup models.Employee
+	if err := database.DB.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []WorkerOvertimeResponse{}, gorm.ErrRecordNotFound
+		}
+		return []WorkerOvertimeResponse{}, err
+	}
+
+	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	sql := `SELECT e.id, e.name, e.email, e.phone_no, e.company_id,
+		SUM((julianday(shifts.end_time) - julianday(shifts.start_time)) * 24.0) as total_hours
+		FROM employees e
+		JOIN shift_assignments sa ON sa.employee_id = e.id
+		JOIN shifts ON sa.shift_id = shifts.id
+		WHERE e.company_id = ? AND shifts.start_time >= ? AND shifts.start_time < ?
+		AND sa.status = ? AND e.role = ?
+		GROUP BY e.id
+		HAVING total_hours > ?`
+
+	var out []WorkerOvertimeResponse
+	if err := database.DB.Raw(sql, sup.CompanyID, weekStart, weekEnd, string(models.StatusAssigned), string(models.RoleWorker), 20).Scan(&out).Error; err != nil {
+		return []WorkerOvertimeResponse{}, err
+	}
+
+	return out, nil
 }

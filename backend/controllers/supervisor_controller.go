@@ -91,10 +91,10 @@ func SupervisorLogin(c *gin.Context) {
 	if err := services.FindEmployeeByEmailAndRole(req.Email, models.RoleSupervisor, &sup); err != nil {
 		log.Printf("SupervisorLogin: lookup failed: %v", err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
- 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
- 		} else {
- 			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
- 		}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "login failed"})
+		}
 		return
 	}
 
@@ -173,7 +173,7 @@ func GetShiftsByCompany(c *gin.Context) {
 	}
 
 	statusParam := c.Query("status")
-	
+
 	// Validate status against the supported set
 	if statusParam != "" {
 		validStatuses := map[string]bool{
@@ -196,7 +196,7 @@ func GetShiftsByCompany(c *gin.Context) {
 	}
 
 	svc := services.SupervisorService{}
-	
+
 	shifts, err := svc.GetShiftsByCompany(uint(empID64), statusParam)
 	if err != nil {
 		log.Printf("GetShiftsByCompany: service error: %v", err)
@@ -209,4 +209,55 @@ func GetShiftsByCompany(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, shifts)
+}
+
+// GetRequestedShifts returns all shifts in Requested status for the authenticated supervisor
+func GetRequestedShifts(c *gin.Context) {
+	// Extract authenticated supervisor ID from context (set by JWT middleware)
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	shifts, err := svc.GetShiftsByCompany(authID, string(models.StatusRequested))
+	if err != nil {
+		log.Printf("GetRequestedShifts: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch shifts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shifts)
+}
+
+// GetWorkersWithOvertimeHours returns all workers whose total assigned shift hours for the current week exceed 20 hours.
+func GetWorkersWithOvertimeHours(c *gin.Context) {
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	now := time.Now()
+	weekday := int(now.Weekday())
+	daysSinceSunday := weekday
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-daysSinceSunday, 0, 0, 0, 0, now.Location())
+
+	svc := services.SupervisorService{}
+	workers, err := svc.GetWorkersWithOvertimeHours(authID, weekStart)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch workers with overtime hours"})
+		return
+	}
+
+	c.JSON(http.StatusOK, workers)
 }
