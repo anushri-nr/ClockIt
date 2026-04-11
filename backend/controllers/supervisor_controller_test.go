@@ -385,69 +385,69 @@ func TestGetRequestedShifts_Controller_Success(t *testing.T) {
 }
 
 func TestGetAssignedShifts_Unauthorized(t *testing.T) {
-    gin.SetMode(gin.TestMode)
-    setupTestDB(t)
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
 
-    r := gin.New()
-    r.GET("/api/supervisors/shifts/assigned", GetAssignedShifts)
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", GetAssignedShifts)
 
-    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
-    w := httptest.NewRecorder()
-    r.ServeHTTP(w, req)
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-    require.Equal(t, http.StatusUnauthorized, w.Code)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestGetAssignedShifts_SupervisorNotFound(t *testing.T) {
-    gin.SetMode(gin.TestMode)
-    setupTestDB(t)
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
 
-    r := gin.New()
-    r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
-        // mimic auth middleware context
-        c.Set("employee_id", uint(999999))
-        GetAssignedShifts(c)
-    })
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+		// mimic auth middleware context
+		c.Set(services.ContextEmployeeID, uint(999999))
+		GetAssignedShifts(c)
+	})
 
-    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
-    w := httptest.NewRecorder()
-    r.ServeHTTP(w, req)
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-    require.Equal(t, http.StatusNotFound, w.Code)
+	require.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestGetAssignedShifts_Success_Empty(t *testing.T) {
-    gin.SetMode(gin.TestMode)
-    setupTestDB(t)
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
 
-    company := models.Company{Name: "Assigned Shift Co"}
-    require.NoError(t, database.DB.Create(&company).Error)
+	company := models.Company{Name: "Assigned Shift Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
 
-    supervisor := models.Employee{
-        Name:      "Sup A",
-        Email:     "sup.assigned@test.local",
-        Password:  "hashed-or-dummy",
-        Role:      models.RoleSupervisor,
-        CompanyID: company.ID,
-        Wage:      40,
-    }
-    require.NoError(t, database.DB.Create(&supervisor).Error)
+	supervisor := models.Employee{
+		Name:      "Sup A",
+		Email:     "sup.assigned@test.local",
+		Password:  "hashed-or-dummy",
+		Role:      models.RoleSupervisor,
+		CompanyID: company.ID,
+		Wage:      40,
+	}
+	require.NoError(t, database.DB.Create(&supervisor).Error)
 
-    r := gin.New()
-    r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
-        c.Set("employee_id", supervisor.ID)
-        GetAssignedShifts(c)
-    })
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, supervisor.ID)
+		GetAssignedShifts(c)
+	})
 
-    req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
-    w := httptest.NewRecorder()
-    r.ServeHTTP(w, req)
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-    require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, http.StatusOK, w.Code)
 
-    var resp []map[string]interface{}
-    require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-    require.NotNil(t, resp) // can be empty, but valid JSON array
+	var resp []map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotNil(t, resp) // can be empty, but valid JSON array
 }
 
 func TestGetWorkersWithOvertimeHours_Controller_Success(t *testing.T) {

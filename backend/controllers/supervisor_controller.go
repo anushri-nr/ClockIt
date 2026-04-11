@@ -237,25 +237,25 @@ func GetRequestedShifts(c *gin.Context) {
 
 // GetAssignedShifts returns all shifts with status Assigned for the authenticated supervisor's company
 func GetAssignedShifts(c *gin.Context) {
-    authID, err := services.GetAuthenticatedEmployeeID(c)
-    if err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
-        return
-    }
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
 
-    svc := services.SupervisorService{}
-    shifts, err := svc.GetShiftsByCompany(authID, string(models.StatusAssigned))
-    if err != nil {
-        log.Printf("GetAssignedShifts: service error: %v", err)
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
-            return
-        }
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch shifts"})
-        return
-    }
+	svc := services.SupervisorService{}
+	shifts, err := svc.GetShiftsByCompany(authID, string(models.StatusAssigned))
+	if err != nil {
+		log.Printf("GetAssignedShifts: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch shifts"})
+		return
+	}
 
-    c.JSON(http.StatusOK, shifts)
+	c.JSON(http.StatusOK, shifts)
 }
 
 // GetWorkersWithOvertimeHours returns all workers whose total assigned shift hours for the current week exceed 20 hours.
@@ -287,28 +287,28 @@ func GetWorkersWithOvertimeHours(c *gin.Context) {
 
 // RejectShiftRequest rejects a requested shift and re-releases it.
 func RejectShiftRequest(c *gin.Context) {
-    authID, err := services.GetAuthenticatedEmployeeID(c)
-    if err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
-        return
-    }
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
 
-    shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
-        return
-    }
+	shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+		return
+	}
 
-    svc := services.SupervisorService{}
-    assignment, err := svc.RejectShiftRequest(authID, uint(shiftID64))
-    if err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "requested shift not found"})
-            return
-        }
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject shift request"})
-        return
-    }
+	svc := services.SupervisorService{}
+	assignment, err := svc.RejectShiftRequest(authID, uint(shiftID64))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "requested shift not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject shift request"})
+		return
+	}
 
-    c.JSON(http.StatusOK, assignment)
+	c.JSON(http.StatusOK, assignment)
 }
