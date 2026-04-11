@@ -237,7 +237,7 @@ func TestReleaseShiftForWorker_Success(t *testing.T) {
 	require.NoError(t, database.DB.Create(&sa).Error)
 
 	router := gin.New()
-	router.POST("/api/workers/shifts", func(c *gin.Context) {
+	router.POST("/api/shifts/release", func(c *gin.Context) {
 		c.Set(services.ContextEmployeeID, uint(worker.ID))
 		c.Set(services.ContextEmployeeRole, string(models.RoleWorker))
 		ReleaseShiftForWorker(c)
@@ -245,7 +245,7 @@ func TestReleaseShiftForWorker_Success(t *testing.T) {
 
 	body := map[string]uint{"shift_id": shift.ID}
 	jb, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/workers/shifts", bytes.NewReader(jb))
+	req := httptest.NewRequest(http.MethodPost, "/api/shifts/release", bytes.NewReader(jb))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -268,7 +268,7 @@ func TestReleaseShiftForWorker_NotFound(t *testing.T) {
 	require.NoError(t, database.DB.Create(&worker).Error)
 
 	router := gin.New()
-	router.POST("/api/workers/shifts", func(c *gin.Context) {
+	router.POST("/api/shifts/release", func(c *gin.Context) {
 		c.Set(services.ContextEmployeeID, uint(worker.ID))
 		c.Set(services.ContextEmployeeRole, string(models.RoleWorker))
 		ReleaseShiftForWorker(c)
@@ -276,7 +276,7 @@ func TestReleaseShiftForWorker_NotFound(t *testing.T) {
 
 	body := map[string]uint{"shift_id": 9999}
 	jb, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/workers/shifts", bytes.NewReader(jb))
+	req := httptest.NewRequest(http.MethodPost, "/api/shifts/release", bytes.NewReader(jb))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -284,3 +284,41 @@ func TestReleaseShiftForWorker_NotFound(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, w.Code)
 }
 
+func TestReleaseShiftForWorker_InvalidStatus_Controller(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "ReleaseShiftCo2"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	sup := models.Employee{ID: 1, Name: "Sup2", Email: "sup2@rs.test", Role: models.RoleSupervisor, CompanyID: company.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+
+	worker := models.Employee{ID: 2, Name: "Worker2", Email: "worker2@rs.test", Role: models.RoleWorker, CompanyID: company.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	end := start.Add(8 * time.Hour)
+	shift := models.Shift{ID: 1, StartTime: start, EndTime: end, CreatedBy: sup.ID}
+	require.NoError(t, database.DB.Create(&shift).Error)
+
+	// create assignment in Requested state
+	sa := models.ShiftAssignment{ShiftID: shift.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusRequested}
+	require.NoError(t, database.DB.Create(&sa).Error)
+
+	router := gin.New()
+	router.POST("/api/shifts/release", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, uint(worker.ID))
+		c.Set(services.ContextEmployeeRole, string(models.RoleWorker))
+		ReleaseShiftForWorker(c)
+	})
+
+	body := map[string]uint{"shift_id": shift.ID}
+	jb, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/shifts/release", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}

@@ -10,6 +10,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// ErrAssignmentNotAssigned is returned when attempting to release an assignment
+// that is not currently in the Assigned state.
+var ErrAssignmentNotAssigned = errors.New("assignment must be in Assigned status to be released")
+
 // CreateShift creates a new shift time slot
 func CreateShift(startTime, endTime time.Time, createdBy uint) (*models.Shift, error) {
 	log.Printf("CreateShift: creator=%d, start=%s, end=%s", createdBy, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
@@ -108,6 +112,11 @@ func ReleaseShiftForWorker(shiftID, employeeID uint) (*models.ShiftAssignment, e
 			return nil, gorm.ErrRecordNotFound
 		}
 		return nil, err
+	}
+
+	// Only allow releasing assignments that are currently Assigned
+	if assignment.Status != models.StatusAssigned {
+		return nil, ErrAssignmentNotAssigned
 	}
 
 	assignment.Status = models.StatusReleased

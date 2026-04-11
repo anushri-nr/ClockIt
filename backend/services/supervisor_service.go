@@ -174,11 +174,12 @@ func (s *SupervisorService) GetWorkersWithOvertimeHours(supervisorID uint, weekS
 		JOIN shift_assignments sa ON sa.employee_id = e.id
 		JOIN shifts ON sa.shift_id = shifts.id
 		WHERE e.company_id = ? AND shifts.start_time >= ? AND shifts.start_time < ?
+		AND sa.status = ? AND e.role = ?
 		GROUP BY e.id
 		HAVING total_hours > ?`
 
 	var out []WorkerOvertimeResponse
-	if err := database.DB.Raw(sql, sup.CompanyID, weekStart.Format(time.RFC3339), weekEnd.Format(time.RFC3339), 20).Scan(&out).Error; err != nil {
+	if err := database.DB.Raw(sql, sup.CompanyID, weekStart, weekEnd, string(models.StatusAssigned), string(models.RoleWorker), 20).Scan(&out).Error; err != nil {
 		return []WorkerOvertimeResponse{}, err
 	}
 

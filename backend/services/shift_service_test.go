@@ -56,6 +56,33 @@ func TestReleaseShiftForWorker_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
 
+func TestReleaseShiftForWorker_InvalidStatus(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "RelCo3"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	sup := models.Employee{Name: "Sup2", Email: "sup2@rel.test", Password: "x", Role: models.RoleSupervisor, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+
+	worker := models.Employee{Name: "W2", Email: "w2@rel.test", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID}
+	require.NoError(t, database.DB.Create(&sft).Error)
+
+	// create an assignment but mark as Requested
+	sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusRequested}
+	require.NoError(t, database.DB.Create(&sa).Error)
+
+	out, err := ReleaseShiftForWorker(sft.ID, worker.ID)
+	require.Error(t, err)
+	require.Nil(t, out)
+	require.ErrorIs(t, err, ErrAssignmentNotAssigned)
+}
+
 func createTestCompany(t *testing.T, name string) models.Company {
 	t.Helper()
 	c := models.Company{Name: name}

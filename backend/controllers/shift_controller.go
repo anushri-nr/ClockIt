@@ -142,7 +142,11 @@ func ReleaseShiftForWorker(c *gin.Context) {
 	if err != nil {
 		log.Printf("ReleaseShiftForWorker: service error: %v", err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Only shifts assigned to the worker may be released"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "shift or assignment not found"})
+			return
+		}
+		if errors.Is(err, services.ErrAssignmentNotAssigned) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "assignment must be in Assigned status to be released"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to release assignment"})
