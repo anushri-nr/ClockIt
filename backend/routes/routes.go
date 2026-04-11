@@ -39,6 +39,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetAssignedShifts,
 		)
+		supervisorRoutes.PATCH("/shifts/:shift_id/reject",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.RejectShiftRequest,
+		)
 	}
 
 	workerRoutes := r.Group("/api/workers")

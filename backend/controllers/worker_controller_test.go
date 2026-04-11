@@ -415,3 +415,120 @@ func TestRequestShift_Success(t *testing.T) {
 	require.Equal(t, models.StatusRequested, updated.Status)
 	require.Equal(t, worker.ID, updated.EmployeeID)
 }
+
+func TestRejectShiftRequest_Unauthorized(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    router := gin.New()
+    router.PATCH("/api/supervisors/shifts/:shift_id/reject", RejectShiftRequest)
+
+    req := httptest.NewRequest(http.MethodPatch, "/api/supervisors/shifts/1/reject", nil)
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestRejectShiftRequest_BadShiftID(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    router := gin.New()
+    router.PATCH("/api/supervisors/shifts/:shift_id/reject", func(c *gin.Context) {
+        c.Set("employee_id", uint(1))
+        RejectShiftRequest(c)
+    })
+
+    req := httptest.NewRequest(http.MethodPatch, "/api/supervisors/shifts/abc/reject", nil)
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestRejectShiftRequest_NotFound(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    company := models.Company{Name: "C1"}
+    require.NoError(t, database.DB.Create(&company).Error)
+
+	supervisor := models.Employee{
+        Name:      "Sup",
+        Email:     "sup.reject.ctrl@test.local",
+        Role:      models.RoleSupervisor,
+        CompanyID: company.ID,
+        Wage:      40,
+    }
+    require.NoError(t, database.DB.Create(&supervisor).Error)
+
+    router := gin.New()
+    router.PATCH("/api/supervisors/shifts/:shift_id/reject", func(c *gin.Context) {
+        c.Set("employee_id", supervisor.ID)
+        RejectShiftRequest(c)
+    })
+
+    req := httptest.NewRequest(http.MethodPatch, "/api/supervisors/shifts/99999/reject", nil)
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestRejectShiftRequest_Success(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+    setupTestDB(t)
+
+    company := models.Company{Name: "C2"}
+    require.NoError(t, database.DB.Create(&company).Error)
+
+    supervisor := models.Employee{
+        Name:      "Sup2",
+        Email:     "sup2.reject.ctrl@test.local",
+        Role:      models.RoleSupervisor,
+        CompanyID: company.ID,
+        Wage:      40,
+    }
+	worker := models.Employee{
+        Name:      "Worker2",
+        Email:     "worker2.reject.ctrl@test.local",
+        Role:      models.RoleWorker,
+        CompanyID: company.ID,
+        Wage:      20,
+    }
+    require.NoError(t, database.DB.Create(&supervisor).Error)
+    require.NoError(t, database.DB.Create(&worker).Error)
+
+    now := time.Now().UTC()
+    shift := models.Shift{
+        StartTime: now.Add(2 * time.Hour),
+        EndTime:   now.Add(10 * time.Hour),
+        CreatedBy: supervisor.ID,
+    }
+    require.NoError(t, database.DB.Create(&shift).Error)
+
+    require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+        ShiftID:    shift.ID,
+        EmployeeID: worker.ID,
+        AssigneeID: supervisor.ID,
+        Status:     models.StatusRequested,
+        AssignedAt: now,
+    }).Error)
+
+    router := gin.New()
+    router.PATCH("/api/supervisors/shifts/:shift_id/reject", func(c *gin.Context) {
+        c.Set("employee_id", supervisor.ID)
+        RejectShiftRequest(c)
+    })
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/supervisors/shifts/%d/reject", shift.ID), nil)
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    require.Equal(t, http.StatusOK, w.Code)
+
+    var updated models.ShiftAssignment
+    require.NoError(t, database.DB.Where("shift_id = ?", shift.ID).First(&updated).Error)
+    require.Equal(t, models.StatusReleased, updated.Status)
+    require.Equal(t, supervisor.ID, updated.AssigneeID)
+}
