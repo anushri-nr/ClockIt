@@ -34,6 +34,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetWorkersWithOvertimeHours,
 		)
+		supervisorRoutes.GET("/shifts/assigned",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.GetAssignedShifts,
+		)
 	}
 
 	workerRoutes := r.Group("/api/workers")
@@ -49,6 +54,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.CreateAvailability,
+		)
+		workerRoutes.GET("/shifts/released",
+			services.JWTAuthMiddleware(),
+			services.WorkerAuthorizationMiddleware(),
+			controllers.GetReleasedShiftsForWorkerCompany,
 		)
 	}
 
@@ -69,6 +79,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.ReleaseShiftForWorker,
+		)
+		supervisorRoutes.PATCH("/shifts/:shift_id/reject",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.RejectShiftRequest,
+		)
+		workerRoutes.POST("/shifts/:shift_id/request",
+			services.JWTAuthMiddleware(),
+			services.WorkerAuthorizationMiddleware(),
+			controllers.RequestShift,
 		)
 	}
 

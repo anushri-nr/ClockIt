@@ -8,7 +8,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.11.1
-	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.48.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1

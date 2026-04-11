@@ -196,7 +196,7 @@ func GetShiftsForWorker(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	// if time window provided, filter results
 	if filterByWindow {
 		filtered := make([]services.AssignedShiftResponse, 0, len(resp))
@@ -211,7 +211,7 @@ func GetShiftsForWorker(c *gin.Context) {
 			}
 			// include shift if it overlaps the provided window
 			if et.Before(startTime) || st.After(endTime) {
-    			continue
+				continue
 			}
 			filtered = append(filtered, r)
 		}
@@ -256,13 +256,13 @@ func CreateAvailability(c *gin.Context) {
 	if err != nil {
 		log.Printf("CreateAvailability: service error: %v", err)
 
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
-            return
-        }
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
+			return
+		}
 
-        c.JSON(http.StatusBadRequest, gin.H{"error": "failed to create availability"})
-        return
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to create availability"})
+		return
 	}
 
 	log.Printf("Availability created successfully, id=%d", availability.ID)
@@ -270,8 +270,30 @@ func CreateAvailability(c *gin.Context) {
 		"id":          availability.ID,
 		"worker_id":   availability.WorkerID,
 		"day_of_week": availability.DayOfWeek,
-		"start_time": availability.StartTime,
-		"end_time":   availability.EndTime,
-		"created_at": availability.CreatedAt.Format(time.RFC3339),
+		"start_time":  availability.StartTime,
+		"end_time":    availability.EndTime,
+		"created_at":  availability.CreatedAt.Format(time.RFC3339),
 	})
+}
+
+// GetReleasedShiftsForWorkerCompany returns all released shifts in the authenticated worker's company.
+func GetReleasedShiftsForWorkerCompany(c *gin.Context) {
+	workerID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	svc := services.WorkerService{}
+	shifts, err := svc.GetReleasedShiftsByEmployeeCompany(workerID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "worker not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch released shifts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shifts)
 }

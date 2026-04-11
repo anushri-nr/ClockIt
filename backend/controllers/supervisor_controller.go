@@ -235,6 +235,29 @@ func GetRequestedShifts(c *gin.Context) {
 	c.JSON(http.StatusOK, shifts)
 }
 
+// GetAssignedShifts returns all shifts with status Assigned for the authenticated supervisor's company
+func GetAssignedShifts(c *gin.Context) {
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	shifts, err := svc.GetShiftsByCompany(authID, string(models.StatusAssigned))
+	if err != nil {
+		log.Printf("GetAssignedShifts: service error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "supervisor not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch shifts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, shifts)
+}
+
 // GetWorkersWithOvertimeHours returns all workers whose total assigned shift hours for the current week exceed 20 hours.
 func GetWorkersWithOvertimeHours(c *gin.Context) {
 	authID, err := services.GetAuthenticatedEmployeeID(c)
@@ -261,3 +284,4 @@ func GetWorkersWithOvertimeHours(c *gin.Context) {
 
 	c.JSON(http.StatusOK, workers)
 }
+
