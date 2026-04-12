@@ -70,21 +70,21 @@ export class SupervisorService {
 
   /// Fetch all assigned shifts for the schedule view
   getAssignedShifts(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/supervisors/shifts/assigned`);
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/assigned`);
   }
 
   // Fetch shifts that workers have requested
   getRequestedShifts(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/supervisors/shifts/requested`);
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/requested`);
   }
 
   // Reject a requested shift
   rejectShiftRequest(shiftId: number): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/supervisors/shifts/${shiftId}/reject`, {});
+    return this.http.patch(`${this.apiUrl}/shifts/${shiftId}/reject`, {});
   }
 
   // Fetch workers at risk of overtime
   getOvertimeRiskWorkers(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/supervisors/workers/overtime`);
+    return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
   }
 }

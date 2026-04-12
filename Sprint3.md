@@ -33,7 +33,7 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 ## Frontend Unit Tests
 
 ### Supervisor Service (`supervisor.service.spec.ts`)
-- `should fetch assigned shifts for the schedule view` (Verifies GET parameters and response mapping).
+- `should fetch assigned shifts for the schedule view` (Verifies assigned shifts are fetched and the response is handled successfully).
 - `should send a PATCH request to reject a requested shift` (Verifies proper HTTP method and URL construction).
 - `should fetch workers at risk of overtime` (Verifies GET request to overtime risk endpoint).
 

@@ -35,7 +35,11 @@ describe('Supervisor Authentication Flow', () => {
     // Verify Overtime / Alerts feature loads
     cy.get('.side-panel').should('exist');
     cy.get('.side-panel').contains('Alerts & tasks', { matchCase: false }).should('exist');
-    // Ensure either the loading state passes or the zero/active state renders
-    cy.get('.side-panel').should('not.contain', 'Checking alerts...');
+    
+    // Wait for the alerts panel to settle after async overtime-risk loading
+    cy.get('.side-panel', { timeout: 10000 }).should(($panel) => {
+      expect($panel.text()).to.match(/alerts & tasks/i);
+      expect($panel.text()).not.to.contain('Checking alerts...');
+    });
   });
 });
