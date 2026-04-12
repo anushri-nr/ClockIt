@@ -106,10 +106,13 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 		}
 	}
 
-	// 3. Fetch the final record to return
+	// 3. Fetch the final record to return and check for errors
 	var assignment models.ShiftAssignment
-	database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").
-		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment)
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").
+		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment).Error; err != nil {
+		log.Printf("AssignWorkerToShift: failed to fetch final assignment: %v", err)
+		return nil, err
+	}
 
 	log.Printf("AssignWorkerToShift: success for shift=%d", shiftID)
 	return &assignment, nil
@@ -155,21 +158,43 @@ func (s *SupervisorService) RejectShiftRequest(supervisorID, shiftID uint) (*mod
 	var out models.ShiftAssignment
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		// Force an explicit UPDATE on the requested shift
+		// 1. Validate supervisor
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+			return err
+		}
+
+		// 2. Find the exact assignment ID to enforce company boundaries (Copilot Fix)
+		var a models.ShiftAssignment
 		err := tx.Table("shift_assignments").
-			Where("shift_id = ? AND status = ?", shiftID, models.StatusRequested).
+			Select("shift_assignments.id").
+			Joins("JOIN shifts ON shifts.id = shift_assignments.shift_id").
+			Joins("JOIN employees creator ON creator.id = shifts.created_by").
+			Where("shift_assignments.shift_id = ?", shiftID).
+			Where("shift_assignments.status = ?", models.StatusRequested).
+			Where("creator.company_id = ?", sup.CompanyID).
+			First(&a).Error
+
+		if err != nil {
+			return err // Returns ErrRecordNotFound if cross-company or not requested
+		}
+
+		// 3. Force explicit UPDATE on that specific record
+		if err := tx.Table("shift_assignments").
+			Where("id = ?", a.ID).
 			Updates(map[string]interface{}{
 				"status":      models.StatusReleased,
 				"assignee_id": supervisorID,
 				"assigned_at": time.Now().UTC(),
-			}).Error
-
-		if err != nil {
+			}).Error; err != nil {
 			return err
 		}
 
-		// Retrieve the updated record to return to the frontend
-		tx.Where("shift_id = ?", shiftID).First(&out)
+		// 4. Retrieve the updated record and verify no errors (Copilot Fix)
+		if err := tx.Where("id = ?", a.ID).First(&out).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 

@@ -42,7 +42,7 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 ### Supervisor Dashboard (`supervisor-login.cy.ts`)
 - Verified the Schedule View successfully renders assigned shift data.
 - Verified the Pending Approvals modal opens and hydrates requested shift data.
-- Verified the Alerts & tasks side panel resolves loading states and correctly displays overtime risk warnings. 
+- Verified the Alerts & tasks side panel resolves loading states and correctly displays overtime risk warnings.
 
 ## Backend Unit Tests
 
