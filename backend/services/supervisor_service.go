@@ -59,9 +59,10 @@ type CreatedShiftsResponse struct {
 	EndTime   string `json:"end_time"`
 	CreatedAt string `json:"created_at"`
 
-	AssignedBy uint   `json:"assigned_by,omitempty"`
-	AssignedTo string `json:"assigned_to,omitempty"`
-	Status     string `json:"status,omitempty"`
+	AssignedBy   uint   `json:"assigned_by,omitempty"`
+	AssignedTo   string `json:"assigned_to,omitempty"`
+	AssignedToID uint   `json:"assigned_to_id,omitempty"`
+	Status       string `json:"status,omitempty"`
 }
 
 type SupervisorService struct{}
@@ -118,6 +119,7 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 	for _, sft := range shifts {
 		var assignedBy uint
 		var assignedTo string
+		var assignedToID uint
 
 		// Use the new Enum as the default string
 		status := string(models.StatusUnassigned)
@@ -128,18 +130,20 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 			status = string(a.Status)
 			if a.Employee.ID != 0 {
 				assignedTo = a.Employee.Name
+				assignedToID = a.Employee.ID
 			}
 		}
 
 		sc := CreatedShiftsResponse{
-			ID:         sft.ID,
-			ShiftID:    sft.ID,
-			StartTime:  sft.StartTime.Format(time.RFC3339),
-			EndTime:    sft.EndTime.Format(time.RFC3339),
-			CreatedAt:  sft.CreatedAt.Format(time.RFC3339),
-			AssignedBy: assignedBy,
-			AssignedTo: assignedTo,
-			Status:     status,
+			ID:           sft.ID,
+			ShiftID:      sft.ID,
+			StartTime:    sft.StartTime.Format(time.RFC3339),
+			EndTime:      sft.EndTime.Format(time.RFC3339),
+			CreatedAt:    sft.CreatedAt.Format(time.RFC3339),
+			AssignedBy:   assignedBy,
+			AssignedTo:   assignedTo,
+			AssignedToID: assignedToID,
+			Status:       status,
 		}
 		resp = append(resp, sc)
 	}
