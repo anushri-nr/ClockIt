@@ -32,6 +32,17 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 
 ## Frontend Unit Tests
 
+### Supervisor Service (`supervisor.service.spec.ts`)
+- `should fetch assigned shifts for the schedule view` (Verifies GET parameters and response mapping).
+- `should send a PATCH request to reject a requested shift` (Verifies proper HTTP method and URL construction).
+- `should fetch workers at risk of overtime` (Verifies GET request to overtime risk endpoint).
+
+## Frontend E2E Tests (Cypress)
+
+### Supervisor Dashboard (`supervisor-login.cy.ts`)
+- Verified the Schedule View successfully renders assigned shift data.
+- Verified the Pending Approvals modal opens and hydrates requested shift data.
+- Verified the Alerts & tasks side panel resolves loading states and correctly displays overtime risk warnings. 
 
 ## Backend Unit Tests
 
