@@ -81,5 +81,31 @@ describe('SupervisorService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockShifts);
   });
+
+  it('should send a PATCH request to reject a requested shift', () => {
+    const testShiftId = 99;
+
+    service.rejectShiftRequest(testShiftId).subscribe(response => {
+      expect(response.message).toBe('Rejected');
+    });
+
+    // Verify it hits the EXACT route from your Go controller
+    const req = httpMock.expectOne(`http://localhost:8080/api/supervisors/shifts/${testShiftId}/reject`);
+    expect(req.request.method).toBe('PATCH');
+    req.flush({ message: 'Rejected' });
+  });
+  
+  it('should fetch workers at risk of overtime', () => {
+    const mockWorkers = [{ id: 4, name: 'John Doe' }];
+
+    service.getOvertimeRiskWorkers().subscribe(workers => {
+      expect(workers.length).toBe(1);
+      expect(workers[0].name).toBe('John Doe');
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/supervisors/workers/overtime');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockWorkers);
+  });
 });
 

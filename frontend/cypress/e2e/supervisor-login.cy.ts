@@ -26,5 +26,16 @@ describe('Supervisor Authentication Flow', () => {
     // Verify the Schedule View loads the grid
     cy.get('.schedule-grid').should('exist');
     cy.get('.schedule-grid').contains('Schedule view', { matchCase: false }).should('not.exist'); // Ensure it's not totally broken
+    
+    // Verify Pending Approvals modal opens and buttons render
+    cy.contains('Pending approvals').click();
+    cy.get('.shift-modal.open').should('exist');
+    cy.get('.shift-modal.open').contains('Action Required', { matchCase: false }).should('exist');
+
+    // Verify Overtime / Alerts feature loads
+    cy.get('.side-panel').should('exist');
+    cy.get('.side-panel').contains('Alerts & tasks', { matchCase: false }).should('exist');
+    // Ensure either the loading state passes or the zero/active state renders
+    cy.get('.side-panel').should('not.contain', 'Checking alerts...');
   });
 });

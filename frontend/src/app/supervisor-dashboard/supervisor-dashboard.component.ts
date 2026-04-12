@@ -25,6 +25,9 @@ export class SupervisorDashboardComponent implements OnInit {
   assignedShifts: any[] = [];
   isLoadingSchedule = false;
 
+  overtimeWorkers: any[] = [];
+  isLoadingOvertime = false;
+
   // View State
   currentDateTime = '';
   scheduleView: 'today' | 'week' = 'today';
@@ -82,6 +85,7 @@ export class SupervisorDashboardComponent implements OnInit {
       // 3. Load the shifts using a guaranteed valid ID!
       this.loadShifts();
       this.loadAssignedSchedule();
+      this.loadOvertimeRisk();
     } else {
       console.error('CRITICAL: No valid user state found. Cannot load shifts.');
     }
@@ -111,6 +115,23 @@ export class SupervisorDashboardComponent implements OnInit {
         this.shifts = data;
       },
       error: (err) => console.error('Failed to load shifts', err)
+    });
+  }
+
+  loadOvertimeRisk() {
+    this.isLoadingOvertime = true;
+    this.supervisorService.getOvertimeRiskWorkers().subscribe({
+      next: (data) => {
+        this.overtimeWorkers = data || [];
+        this.isLoadingOvertime = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load overtime risk workers', err);
+        this.overtimeWorkers = [];
+        this.isLoadingOvertime = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -306,22 +327,56 @@ export class SupervisorDashboardComponent implements OnInit {
   closeOpenShiftsModal() { this.isOpenShiftsModalOpen = false; }
 
   // Fetch 'Requested' shifts when opening the Status Snapshot (Pending Approval) Modal
-  openStatusSnapshot() {
-    this.resetModals();
-    this.isStatusSnapshotOpen = true;
+  openStatusSnapshot() { 
+    this.resetModals(); 
+    this.isStatusSnapshotOpen = true; 
     this.isLoadingPendingShifts = true;
 
-    this.supervisorService.getShifts(this.currentSupervisorId, 'Requested').subscribe({
+    this.supervisorService.getRequestedShifts().subscribe({
       next: (data) => {
-        this.pendingApprovalShifts = data || [];
+        this.pendingApprovalShifts = data || []; 
         this.isLoadingPendingShifts = false;
-        this.cdr.detectChanges(); // Force the UI to refresh instantly
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Failed to load pending approval shifts', err);
-        this.pendingApprovalShifts = []; // Clear array
-        this.isLoadingPendingShifts = false; // Stop spinner
-        this.cdr.detectChanges(); // Force UI to update
+        this.pendingApprovalShifts = [];
+        this.isLoadingPendingShifts = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ISSUE #73 & #77: Approve Action
+  approveRequest(shiftId: number, workerId: number) {
+    if (!workerId) {
+      alert("Worker ID missing from request.");
+      return;
+    }
+    
+    this.supervisorService.assignWorker(shiftId, workerId).subscribe({
+      next: () => {
+        console.log('Shift approved & assigned');
+        this.openStatusSnapshot(); // Refresh the modal list
+        this.loadAssignedSchedule(); // Refresh the main dashboard view
+      },
+      error: (err) => {
+        console.error('Approve failed', err);
+        alert('Failed to approve shift.');
+      }
+    });
+  }
+
+  // ISSUE #73 & #77: Reject Action
+  rejectRequest(shiftId: number) {
+    this.supervisorService.rejectShiftRequest(shiftId).subscribe({
+      next: () => {
+        console.log('Shift request rejected');
+        this.openStatusSnapshot(); // Refresh the modal list
+      },
+      error: (err) => {
+        console.error('Reject failed', err);
+        alert('Failed to reject shift.');
       }
     });
   }
