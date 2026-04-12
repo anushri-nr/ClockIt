@@ -40,6 +40,7 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 - Worker released shifts endpoint tests
 - Worker request shift endpoint tests
 - Supervisor reject shift endpoint tests
+- Supervisor get overworked workers endpoint tests
 
 
 ### Services
@@ -48,6 +49,7 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 - `RejectShiftRequest` tests
 - `GetAssignedShifts` tests
 - `CreateWorkerAvailability` tests
+- `GetWorkersWithOvertimeHours` tests
 
 ---
 
@@ -60,6 +62,7 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 - `GET /api/supervisors/workers/availability` — Fetch worker availability for scheduling.
 - `GET /api/supervisors/shifts/requested` — Get requested shifts for the supervisor’s company.
 - `PATCH /api/supervisors/shifts/:shift_id/reject` — Reject a requested shift.
+- `GET /api/supervisors/workers/overtime` — Get all workers whose total assigned shift hours for the current week exceed 20 hours.
 
 ### Worker APIs
 - `POST /api/workers/register` — Register a worker.
