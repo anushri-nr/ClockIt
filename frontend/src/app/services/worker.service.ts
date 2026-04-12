@@ -21,8 +21,18 @@ export class WorkerService {
 
   constructor(private http: HttpClient) { }
 
-  // GET /api/workers/:employee_id/shifts
-  getMyShifts(workerId: number): Observable<WorkerShift[]> {
-    return this.http.get<WorkerShift[]>(`${this.apiUrl}/${workerId}/shifts`);
+  // GET /api/workers/:employee_id/shifts?start_time=...&end_time=...
+  getMyShifts(workerId: number, startTime?: string, endTime?: string): Observable<WorkerShift[]> {
+    const params: any = {};
+    if (startTime && endTime) {
+      params.start_time = startTime;
+      params.end_time = endTime;
+    }
+    return this.http.get<WorkerShift[]>(`${this.apiUrl}/${workerId}/shifts`, { params });
+  }
+
+  // POST /api/shifts/release
+  releaseShift(shiftId: number): Observable<any> {
+    return this.http.post('http://localhost:8080/api/shifts/release', { shift_id: shiftId });
   }
 }

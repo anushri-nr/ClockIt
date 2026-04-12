@@ -87,4 +87,15 @@ export class SupervisorService {
   getOvertimeRiskWorkers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
   }
+  // 4. APPROVE RELEASED SHIFT
+  // Backend Route: PATCH /api/supervisors/shifts/:shift_id/released/approve
+  approveReleasedShift(shiftId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/shifts/${shiftId}/released/approve`, {});
+  }
+
+  // 5. REJECT RELEASED SHIFT
+  // Backend Route: PATCH /api/supervisors/shifts/:shift_id/released/reject
+  rejectReleasedShift(shiftId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/shifts/${shiftId}/released/reject`, {});
+  }
 }

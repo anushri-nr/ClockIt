@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -38,6 +39,7 @@ export class SupervisorDashboardComponent implements OnInit {
   isOpenShiftsModalOpen = false;
   isAssignWorkerModalOpen = false;
   isStatusSnapshotOpen = false;
+  isProfileMenuOpen = false;
 
   // Create Shift Data
   createShift = { startTime: '', endTime: '', createdBy: this.currentSupervisorId.toString() };
@@ -58,14 +60,19 @@ export class SupervisorDashboardComponent implements OnInit {
   shifts: any[] = [];
   openShifts: any[] = [];
   pendingApprovalShifts: any[] = [];
+  releasedShifts: any[] = [];
   isLoadingOpenShifts = false;
   isLoadingPendingShifts = false;
+  isLoadingReleasedShifts = false;
+  releasedShiftActionLoading: Record<number, boolean> = {};
+  releasedShiftActionError = '';
 
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) { }
 
   ngOnInit() {
@@ -83,7 +90,8 @@ export class SupervisorDashboardComponent implements OnInit {
       console.log(`Dashboard initialized for User ID: ${this.currentSupervisorId}`);
 
       // 3. Load the shifts using a guaranteed valid ID!
-      this.loadShifts();
+      this.loadShifts(); 
+      this.loadReleasedShifts();
       this.loadAssignedSchedule();
       this.loadOvertimeRisk();
     } else {
@@ -382,8 +390,79 @@ export class SupervisorDashboardComponent implements OnInit {
   }
   closeStatusSnapshot() { this.isStatusSnapshotOpen = false; }
 
+  loadReleasedShifts() {
+    this.isLoadingReleasedShifts = true;
+    this.releasedShiftActionError = '';
+
+    this.supervisorService.getShifts(this.currentSupervisorId, 'Released').subscribe({
+      next: (data) => {
+        this.releasedShifts = data || [];
+        this.isLoadingReleasedShifts = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load released shifts', err);
+        this.releasedShifts = [];
+        this.isLoadingReleasedShifts = false;
+        this.releasedShiftActionError = 'Failed to load released shifts. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  approveReleasedShift(shift: any) {
+    this.handleReleasedShiftDecision(shift, 'approve');
+  }
+
+  rejectReleasedShift(shift: any) {
+    this.handleReleasedShiftDecision(shift, 'reject');
+  }
+
+  private handleReleasedShiftDecision(shift: any, action: 'approve' | 'reject') {
+    const shiftId = Number(shift?.id ?? shift?.shift_id);
+    if (!shiftId) return;
+
+    this.releasedShiftActionError = '';
+    this.releasedShiftActionLoading[shiftId] = true;
+
+    const request$ =
+      action === 'approve'
+        ? this.supervisorService.approveReleasedShift(shiftId)
+        : this.supervisorService.rejectReleasedShift(shiftId);
+
+    request$.subscribe({
+      next: () => {
+        this.releasedShifts = this.releasedShifts.filter(
+          (s: any) => Number(s?.id ?? s?.shift_id) !== shiftId
+        );
+        this.releasedShiftActionLoading[shiftId] = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error(`Failed to ${action} released shift`, err);
+        this.releasedShiftActionLoading[shiftId] = false;
+        this.releasedShiftActionError = `Failed to ${action} released shift. Please try again.`;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   setScheduleView(view: 'today' | 'week') {
     this.scheduleView = view;
+  }
+
+  toggleProfileMenu() {
+    this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  closeProfileMenu() {
+    this.isProfileMenuOpen = false;
+  }
+
+  logout() {
+    this.authService.logout();
+    this.closeProfileMenu();
+    this.router.navigate(['/login']);
   }
 
   private updateDateTime() {

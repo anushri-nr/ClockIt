@@ -77,6 +77,17 @@
   
   .highlight-card mat-card-title { color: white; font-size: 1.8rem; margin-bottom: 5px; }
   .highlight-card mat-card-subtitle { color: rgba(255,255,255, 0.8); }
+  .highlight-card .btn-inverse {
+    color: #0f5f5c;
+    background: #ffffff;
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-weight: 700;
+    box-shadow: 0 10px 20px rgba(15, 95, 92, 0.25);
+  }
+  .highlight-card .btn-inverse:hover {
+    background: #f7f7f7;
+  }
 
   
   h2 {
@@ -101,6 +112,34 @@
 
   .brand { font-weight: 700; letter-spacing: 1px; font-size: 1.1rem; }
   .spacer { flex: 1 1 auto; }
+  .user-profile { display: flex; align-items: center; gap: 10px; position: relative; }
+  .profile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #fff;
+    color: #1f2328;
+    border: 1px solid rgba(31, 35, 40, 0.12);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(15, 95, 92, 0.18);
+    padding: 6px;
+    min-width: 140px;
+    z-index: 5;
+  }
+  .profile-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #1f2328;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .profile-item:hover {
+    background: #f4efe7;
+  }
   
   .big-number {
     font-size: 2.8rem;
@@ -132,6 +171,7 @@
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
   }
 
   .weekly-title {
@@ -147,6 +187,39 @@
 
   .weekly-total {
     text-align: right;
+  }
+
+  .weekly-days-wrap {
+    position: relative;
+    padding: 0 36px;
+  }
+
+  .weekly-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(31, 35, 40, 0.12);
+    background: #fff;
+    color: #1f2328;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(31, 35, 40, 0.08);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .weekly-nav-btn.prev {
+    left: 0;
+  }
+
+  .weekly-nav-btn.next {
+    right: 0;
   }
 
   .weekly-hours {
@@ -178,13 +251,15 @@
 
   .weekly-days {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(55px, 1fr));
+    gap: 1px;
+    max-width: calc(100% - 72px);
+    margin: 0 auto;
   }
 
   .weekly-day {
-    padding: 12px;
-    border-radius: 16px;
+    padding: 17px;
+    border-radius: 14px;
     background: #ffffff;
     border: 1px solid rgba(15, 95, 92, 0.06);
   }
@@ -193,19 +268,20 @@
     font-weight: 700;
     color: #1f2328;
     letter-spacing: 0.04em;
+    font-size: 0.9rem;
   }
 
   .day-date {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: #7b8594;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .day-hours {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #144e4b;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .day-track {
@@ -312,6 +388,40 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     font-size: 0.75rem;
+  }
+
+  .upcoming-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .release-btn {
+    color: #0f5f5c;
+    background: #f7f2ea;
+    border: 1px solid rgba(15, 95, 92, 0.15);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .release-btn:hover {
+    background: #f1ebe1;
+  }
+
+  .release-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .release-error {
+    background: rgba(214, 69, 69, 0.12);
+    color: #d64545;
+    padding: 8px 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
   }
 
   .upcoming-empty {

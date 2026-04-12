@@ -48,6 +48,37 @@
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
+  position: relative;
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid rgba(31, 35, 40, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 95, 92, 0.18);
+  padding: 6px;
+  min-width: 140px;
+  z-index: 5;
+}
+
+.profile-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-item:hover {
+  background: var(--surface-alt);
 }
 
 .spacer {
@@ -131,6 +162,11 @@
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: none;
+}
+
+.btn.danger {
+  background: var(--danger);
+  box-shadow: 0 10px 18px rgba(214, 69, 69, 0.25);
 }
 
 .btn.small {
@@ -837,6 +873,21 @@
 .request-actions {
   display: flex;
   gap: 8px;
+}
+
+.inline-muted {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.inline-error {
+  background: rgba(214, 69, 69, 0.12);
+  color: var(--danger);
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin: 8px 0;
 }
 
 .divider {

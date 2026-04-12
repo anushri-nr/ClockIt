@@ -257,9 +257,12 @@
       <span class="spacer"></span>
       <div class="user-profile">
         <span>Hello, {{ currentSupervisorName }}</span>
-        <button mat-icon-button type="button">
+        <button mat-icon-button type="button" (click)="toggleProfileMenu()">
           <mat-icon>account_circle</mat-icon>
         </button>
+        <div class="profile-menu" *ngIf="isProfileMenuOpen">
+          <button class="profile-item" type="button" (click)="logout()">Logout</button>
+        </div>
       </div>
     </mat-toolbar>
 
@@ -377,7 +380,51 @@
           </ul>
         </article>
         <article class="card">
-          <h3>Requests & approvals</h3>
+          <div class="panel-title">
+            <h3>Released shifts</h3>
+            <button class="btn ghost dark small" type="button" (click)="loadReleasedShifts()">Refresh</button>
+          </div>
+
+          <div *ngIf="releasedShiftActionError" class="inline-error">
+            {{ releasedShiftActionError }}
+          </div>
+
+          <div *ngIf="isLoadingReleasedShifts" class="inline-muted">
+            Loading released shifts...
+          </div>
+
+          <div *ngIf="!isLoadingReleasedShifts && releasedShifts.length === 0" class="inline-muted">
+            No released shifts right now.
+          </div>
+
+          <div *ngIf="!isLoadingReleasedShifts && releasedShifts.length > 0">
+            <div class="request" *ngFor="let shift of releasedShifts">
+              <div>
+                <div class="request-title">
+                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
+                </div>
+                <div class="request-sub">
+                  Released by {{ shift.assigned_to || 'a worker' }}
+                </div>
+              </div>
+              <div class="request-actions">
+                <button
+                  class="btn small"
+                  type="button"
+                  [disabled]="releasedShiftActionLoading[shift.id]"
+                  (click)="approveReleasedShift(shift)">
+                  Approve
+                </button>
+                <button
+                  class="btn small danger"
+                  type="button"
+                  [disabled]="releasedShiftActionLoading[shift.id]"
+                  (click)="rejectReleasedShift(shift)">
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
         </article>
       </aside>
     </section>

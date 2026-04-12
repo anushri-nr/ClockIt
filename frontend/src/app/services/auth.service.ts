@@ -99,4 +99,10 @@ export class AuthService {
   getCompanies(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/companies/`);
   }
+
+  logout(): void {
+    localStorage.removeItem('jwt_token');
+    localStorage.removeItem('user_data');
+    this.currentUserSubject.next(null);
+  }
 }

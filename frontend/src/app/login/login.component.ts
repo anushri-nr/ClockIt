@@ -32,6 +32,7 @@ export class LoginComponent implements OnInit {
   password = '';
   currentRole = 'Worker';
   isLoading = false;
+  showPassword = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -50,6 +51,10 @@ export class LoginComponent implements OnInit {
 
   onRegister() {
     this.router.navigate(['/register'], { queryParams: { role: this.currentRole } });
+  }
+
+  togglePassword() {
+    this.showPassword = !this.showPassword;
   }
 
   onSubmit() {

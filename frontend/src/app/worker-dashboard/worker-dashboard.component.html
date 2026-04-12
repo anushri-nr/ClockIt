@@ -5,9 +5,12 @@
     <span class="spacer"></span>
     <div class="user-profile">
       <span>Hello, {{ currentWorkerName }}</span>
-      <button mat-icon-button>
+      <button mat-icon-button type="button" (click)="toggleProfileMenu()">
         <mat-icon>account_circle</mat-icon>
       </button>
+      <div class="profile-menu" *ngIf="isProfileMenuOpen">
+        <button class="profile-item" type="button" (click)="logout()">Logout</button>
+      </div>
     </div>
   </mat-toolbar>
 
@@ -26,7 +29,7 @@
             <p>Main Store • {{ nextShift.start_time | date:'MMM d' }}</p>
             <div class="shift-meta">
               <span class="shift-chip">Assigned</span>
-              <span class="shift-by">Supervisor #{{ nextShift.assigned_by }}</span>
+              <span class="shift-by">Supervisor {{ nextShift.assigned_by }}</span>
             </div>
           </mat-card-content>
         </ng-container>
@@ -41,9 +44,7 @@
           </mat-card-content>
         </ng-template>
 
-        <mat-card-actions>
-          <button mat-button class="btn-inverse">View Details</button>
-        </mat-card-actions>
+        <mat-card-actions></mat-card-actions>
       </mat-card>
 
       <mat-card class="stat-card">
@@ -61,7 +62,7 @@
           <span>Est. Earnings</span>
         </div>
         <div class="big-number">{{ estEarnings | currency }}</div>
-        <div class="sub-text">Pending Approval</div>
+        <div class="sub-text">&nbsp;</div>
       </mat-card>
     </div>
 
@@ -81,13 +82,21 @@
         <div class="weekly-progress">
           <div class="weekly-progress-bar" [style.width.%]="weeklyProgress"></div>
         </div>
-        <div class="weekly-days">
-          <div class="weekly-day" *ngFor="let day of weeklyDays">
-            <div class="day-label">{{ day.label }}</div>
-            <div class="day-date">{{ day.date | date:'MMM d' }}</div>
-            <div class="day-hours">{{ day.hours | number:'1.1-1' }} hrs</div>
-            <div class="day-track">
-              <div class="day-fill" [style.width.%]="day.percent"></div>
+        <div class="weekly-days-wrap">
+          <button class="weekly-nav-btn prev" type="button" aria-label="Previous week" (click)="previousWeek()">
+            &lt;
+          </button>
+          <button class="weekly-nav-btn next" type="button" aria-label="Next week" (click)="nextWeek()">
+            &gt;
+          </button>
+          <div class="weekly-days">
+            <div class="weekly-day" *ngFor="let day of weeklyDays">
+              <div class="day-label">{{ day.label }}</div>
+              <div class="day-date">{{ day.date | date:'MMM d' }}</div>
+              <div class="day-hours">{{ day.hours | number:'1.1-1' }} hrs</div>
+              <div class="day-track">
+                <div class="day-fill" [style.width.%]="day.percent"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -97,9 +106,10 @@
     <div class="grid-section">
       <h2>Upcoming Assigned Shifts</h2>
       <mat-card class="upcoming-card">
+        <div class="release-error" *ngIf="releaseError">{{ releaseError }}</div>
         <ng-container *ngIf="assignedShifts.length > 0; else noAssigned">
           <div class="upcoming-list">
-            <div class="upcoming-item" *ngFor="let shift of assignedShifts | slice:0:3">
+            <div class="upcoming-item" *ngFor="let shift of assignedShifts | slice:0:5">
               <div class="upcoming-date">
                 <div class="upcoming-day">{{ shift.start_time | date:'EEE' }}</div>
                 <div class="upcoming-date-num">{{ shift.start_time | date:'d' }}</div>
@@ -109,9 +119,19 @@
                 <div class="upcoming-time">
                   {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
                 </div>
-                <div class="upcoming-meta">Assigned by Supervisor #{{ shift.assigned_by }}</div>
+                <div class="upcoming-meta">Assigned by Supervisor {{ shift.assigned_by }}</div>
               </div>
-              <div class="upcoming-status">Assigned</div>
+              <div class="upcoming-actions">
+                <div class="upcoming-status">Assigned</div>
+                <button
+                  mat-button
+                  class="release-btn"
+                  type="button"
+                  [disabled]="isReleasing[shift.shift_id]"
+                  (click)="releaseShift(shift)">
+                  {{ isReleasing[shift.shift_id] ? 'Releasing...' : 'Release Shift' }}
+                </button>
+              </div>
             </div>
           </div>
         </ng-container>

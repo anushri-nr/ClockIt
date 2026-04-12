@@ -191,6 +191,61 @@ func RejectShiftRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, assignment)
 }
 
+// ApproveReleasedShift approves a released shift and makes it unassigned/open.
+func ApproveReleasedShift(c *gin.Context) {
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	if err := svc.ApproveReleasedShift(authID, uint(shiftID64)); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "released shift not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to approve released shift"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "approved"})
+}
+
+// RejectReleasedShift rejects a released shift and restores assignment.
+func RejectReleasedShift(c *gin.Context) {
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	assignment, err := svc.RejectReleasedShift(authID, uint(shiftID64))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "released shift not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reject released shift"})
+		return
+	}
+
+	c.JSON(http.StatusOK, assignment)
+}
+
 // RequestShift lets an authenticated worker request a released shift.
 func RequestShift(c *gin.Context) {
 	workerID, err := services.GetAuthenticatedEmployeeID(c)

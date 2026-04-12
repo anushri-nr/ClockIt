@@ -11,6 +11,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, tap } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -45,6 +46,7 @@ export class WorkerDashboardComponent implements OnInit {
   currentWorkerName: string = '';
 
   currentDateTime = '';
+  isProfileMenuOpen = false;
 
   myShifts$!: Observable<WorkerShift[]>;
   nextShift: WorkerShift | null = null;
@@ -59,10 +61,15 @@ export class WorkerDashboardComponent implements OnInit {
   weeklyProgress = 0;
   weekRangeLabel = '';
   weeklyDays: Array<{ label: string; date: Date; hours: number; percent: number }> = [];
+  weekOffset = 0;
+  private latestShifts: WorkerShift[] = [];
+  isReleasing: Record<number, boolean> = {};
+  releaseError = '';
 
   constructor(
     private workerService: WorkerService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) { }
 
   colDefs: ColDef[] = [
@@ -133,21 +140,59 @@ export class WorkerDashboardComponent implements OnInit {
       this.currentCompanyId = user.company_id || 1;
 
       console.log(`Worker Dashboard initialized for User ID: ${this.currentWorkerId}`);
+      this.weekOffset = 0;
 
       // 3. Load shifts using the REAL dynamic ID
-      this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
-        tap((data) => {
-          const safeData = data || [];
-          console.log("Stream received data:", safeData);
-          this.calculateStats(safeData);
-          this.findNextShift(safeData);
-          this.assignedShifts = this.getAssignedShifts(safeData);
-          this.calculateWeeklyAssigned(safeData);
-        })
-      );
+      this.reloadShifts();
     } else {
       console.error('CRITICAL: No valid user state found. Cannot load worker shifts.');
     }
+  }
+
+  private reloadShifts() {
+    const { start, end } = this.getUpcomingWindow();
+    this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId, start, end).pipe(
+      tap((data) => {
+        const safeData = data || [];
+        this.latestShifts = safeData;
+        console.log("Stream received data:", safeData);
+        this.calculateStats(safeData);
+        this.findNextShift(safeData);
+        this.assignedShifts = this.getAssignedShifts(safeData);
+        this.calculateWeeklyAssigned(safeData);
+      })
+    );
+  }
+
+  private getUpcomingWindow() {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 28);
+    return {
+      start: start.toISOString(),
+      end: end.toISOString()
+    };
+  }
+
+  releaseShift(shift: WorkerShift) {
+    const shiftId = Number(shift?.shift_id ?? shift?.id);
+    if (!shiftId || this.isReleasing[shiftId]) return;
+
+    this.releaseError = '';
+    this.isReleasing[shiftId] = true;
+
+    this.workerService.releaseShift(shiftId).subscribe({
+      next: () => {
+        this.isReleasing[shiftId] = false;
+        this.reloadShifts();
+      },
+      error: (err) => {
+        console.error('Failed to release shift', err);
+        this.isReleasing[shiftId] = false;
+        this.releaseError = 'Failed to release shift. Please try again.';
+      }
+    });
   }
 
   calculateStats(shifts: WorkerShift[]) {
@@ -191,8 +236,7 @@ export class WorkerDashboardComponent implements OnInit {
   }
 
   calculateWeeklyAssigned(shifts: WorkerShift[]) {
-    const now = new Date();
-    const startOfWeek = this.getStartOfWeek(now);
+    const startOfWeek = this.getWeekStartFromOffset();
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
@@ -244,10 +288,45 @@ export class WorkerDashboardComponent implements OnInit {
     return start;
   }
 
+  private getWeekStartFromOffset() {
+    const base = this.getStartOfWeek(new Date());
+    base.setDate(base.getDate() + this.weekOffset * 7);
+    return base;
+  }
+
+  previousWeek() {
+    this.weekOffset -= 1;
+    this.refreshWeeklyView();
+  }
+
+  nextWeek() {
+    this.weekOffset += 1;
+    this.refreshWeeklyView();
+  }
+
+  private refreshWeeklyView() {
+    const safeData = this.latestShifts || [];
+    this.calculateWeeklyAssigned(safeData);
+  }
+
   private updateDateTime() {
     const now = new Date();
     this.currentDateTime = new Intl.DateTimeFormat('en-US', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     }).format(now);
+  }
+
+  toggleProfileMenu() {
+    this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  closeProfileMenu() {
+    this.isProfileMenuOpen = false;
+  }
+
+  logout() {
+    this.authService.logout();
+    this.closeProfileMenu();
+    this.router.navigate(['/login']);
   }
 }

@@ -85,6 +85,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.RejectShiftRequest,
 		)
+		supervisorRoutes.PATCH("/shifts/:shift_id/released/approve",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.ApproveReleasedShift,
+		)
+		supervisorRoutes.PATCH("/shifts/:shift_id/released/reject",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.RejectReleasedShift,
+		)
 		workerRoutes.POST("/shifts/:shift_id/request",
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
