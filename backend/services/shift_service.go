@@ -138,72 +138,37 @@ func ReleaseShiftForWorker(shiftID, employeeID uint) (*models.ShiftAssignment, e
 // RejectShiftRequest lets a supervisor reject a requested shift in their company.
 // Status transition: Requested -> Released
 func (s *SupervisorService) RejectShiftRequest(supervisorID, shiftID uint) (*models.ShiftAssignment, error) {
-    var assignment models.ShiftAssignment
-
-    err := database.DB.Transaction(func(tx *gorm.DB) error {
-        var sup models.Employee
-        if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
-            return err
-        }
-
-        if err := tx.
-            Table("shift_assignments as sa").
-            Select("sa.*").
-            Joins("JOIN shifts s ON s.id = sa.shift_id").
-            Joins("JOIN employees creator ON creator.id = s.created_by").
-            Where("sa.shift_id = ?", shiftID).
-            Where("sa.status = ?", models.StatusRequested).
-            Where("creator.company_id = ?", sup.CompanyID).
-            First(&assignment).Error; err != nil {
-            return err
-        }
-
-        if err := tx.Model(&assignment).Updates(map[string]interface{}{
-            "status":      models.StatusReleased,
-            "assignee_id": supervisorID,
-            "assigned_at": time.Now().UTC(),
-        }).Error; err != nil {
-            return err
-        }
-
-        assignment.Status = models.StatusReleased
-        assignment.AssigneeID = supervisorID
-        assignment.AssignedAt = time.Now().UTC()
-        return nil
-    })
-
-    if err != nil {
-        return nil, err
-    }
-
-    return &assignment, nil
-}
-
-
-func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, error) {
 	var assignment models.ShiftAssignment
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		// worker must exist
-		var worker models.Employee
-		if err := tx.Where("id = ? AND role = ?", workerID, models.RoleWorker).First(&worker).Error; err != nil {
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
 			return err
 		}
 
-		// find the existing released assignment row
 		if err := tx.
-			Where("shift_id = ? AND employee_id = ? AND status = ?", shiftID, workerID, models.StatusReleased).
+			Table("shift_assignments as sa").
+			Select("sa.*").
+			Joins("JOIN shifts s ON s.id = sa.shift_id").
+			Joins("JOIN employees creator ON creator.id = s.created_by").
+			Where("sa.shift_id = ?", shiftID).
+			Where("sa.status = ?", models.StatusRequested).
+			Where("creator.company_id = ?", sup.CompanyID).
 			First(&assignment).Error; err != nil {
 			return err
 		}
 
-		// update only the status
-		if err := tx.Model(&assignment).
-			Update("status", models.StatusRequested).Error; err != nil {
+		if err := tx.Model(&assignment).Updates(map[string]interface{}{
+			"status":      models.StatusReleased,
+			"assignee_id": supervisorID,
+			"assigned_at": time.Now().UTC(),
+		}).Error; err != nil {
 			return err
 		}
 
-		assignment.Status = models.StatusRequested
+		assignment.Status = models.StatusReleased
+		assignment.AssigneeID = supervisorID
+		assignment.AssignedAt = time.Now().UTC()
 		return nil
 	})
 
@@ -211,5 +176,54 @@ func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, erro
 		return nil, err
 	}
 
+	return &assignment, nil
+}
+
+
+func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, error) {
+	var assignment models.ShiftAssignment
+
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// validate worker
+		var worker models.Employee
+		if err := tx.
+			Where("id = ? AND role = ?", workerID, models.RoleWorker).
+			First(&worker).Error; err != nil {
+			return err
+		}
+
+		// find one released assignment for this shift in worker's company
+		if err := tx.
+			Table("shift_assignments AS sa").
+			Select("sa.*").
+			Joins("JOIN shifts s ON s.id = sa.shift_id").
+			Joins("JOIN employees creator ON creator.id = s.created_by").
+			Where("sa.shift_id = ?", shiftID).
+			Where("sa.status = ?", models.StatusReleased).
+			Where("creator.company_id = ?", worker.CompanyID).
+			Order("sa.assigned_at DESC").
+			First(&assignment).Error; err != nil {
+			return err
+		}
+
+		// update same row (no new row)
+		now := time.Now().UTC()
+		if err := tx.Model(&assignment).Updates(map[string]interface{}{
+			"employee_id": workerID,
+			"status":      models.StatusRequested,
+			"assigned_at": now,
+		}).Error; err != nil {
+			return err
+		}
+
+		assignment.EmployeeID = workerID
+		assignment.Status = models.StatusRequested
+		assignment.AssignedAt = now
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
 	return &assignment, nil
 }
