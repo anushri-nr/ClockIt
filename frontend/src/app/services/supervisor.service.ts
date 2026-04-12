@@ -67,4 +67,9 @@ export class SupervisorService {
     // So we use a different base URL for this specific call
     return this.http.post('http://localhost:8080/api/shifts/assign', payload);
   }
+
+  // Fetch all assigned shifts for the schedule view
+  getAssignedShifts(): Observable<any[]> {
+    return this.http.get<any[]>('http://localhost:8080/api/supervisors/shifts/assigned');
+  }
 }

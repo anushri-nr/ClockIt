@@ -22,6 +22,9 @@ export class SupervisorDashboardComponent implements OnInit {
   currentCompanyId: number = 0;
   currentSupervisorName: string = '';
 
+  assignedShifts: any[] = [];
+  isLoadingSchedule = false;
+
   // View State
   currentDateTime = '';
   scheduleView: 'today' | 'week' = 'today';
@@ -75,12 +78,30 @@ export class SupervisorDashboardComponent implements OnInit {
       this.currentCompanyId = user.company_id || 1;
 
       console.log(`Dashboard initialized for User ID: ${this.currentSupervisorId}`);
-      
+
       // 3. Load the shifts using a guaranteed valid ID!
-      this.loadShifts(); 
+      this.loadShifts();
+      this.loadAssignedSchedule();
     } else {
       console.error('CRITICAL: No valid user state found. Cannot load shifts.');
     }
+  }
+
+  loadAssignedSchedule() {
+    this.isLoadingSchedule = true;
+    this.supervisorService.getAssignedShifts().subscribe({
+      next: (data) => {
+        this.assignedShifts = data || [];
+        this.isLoadingSchedule = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load assigned schedule', err);
+        this.assignedShifts = [];
+        this.isLoadingSchedule = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   loadShifts() {
@@ -106,7 +127,7 @@ export class SupervisorDashboardComponent implements OnInit {
 
   submitCreateShift(): void {
     if (this.isSubmittingShift) return;
-    
+
     // Reset Error
     this.createShiftError = '';
 
@@ -137,7 +158,7 @@ export class SupervisorDashboardComponent implements OnInit {
         this.closeShiftModal();
 
         this.cdr.detectChanges();
-        
+
         // Reset form
         this.createShift = { startTime: '', endTime: '', createdBy: this.currentSupervisorId.toString() };
         this.loadShifts();
@@ -169,13 +190,13 @@ export class SupervisorDashboardComponent implements OnInit {
 
         this.closeAssignWorkerModal();
         this.cdr.detectChanges();
-        
+
         // Refresh the grid to show the new assignment
-        this.loadShifts(); 
+        this.loadShifts();
       },
       error: (err) => {
         console.error('Assignment failed', err);
-        
+
         // Intercept the SQLite database error and make it user-friendly
         const backendError = err.error?.error || '';
         if (backendError.includes('UNIQUE constraint failed')) {
@@ -183,7 +204,7 @@ export class SupervisorDashboardComponent implements OnInit {
         } else {
           this.assignShiftError = 'Failed to assign worker. Please try again.';
         }
-        
+
         this.cdr.detectChanges();
       }
     });
@@ -195,13 +216,13 @@ export class SupervisorDashboardComponent implements OnInit {
     this.selectedWorkerId = '';
     this.assignShiftError = ''; // Clear errors on selection change
 
-    if(!this.selectedShiftId) return;
+    if (!this.selectedShiftId) return;
 
     // 2. Find the full shift object to get its date
     // We cast to 'any' to avoid type errors with snake_case
     const shift: any = this.shifts.find((s: any) => s.id == this.selectedShiftId);
 
-    if(shift) {
+    if (shift) {
       this.isLoadingWorkers = true;
 
       // 3. Extract the date (YYYY-MM-DD) from the shift's start time
@@ -246,13 +267,13 @@ export class SupervisorDashboardComponent implements OnInit {
   }
 
   openAssignWorkerModal() {
-  this.resetModals();
-  this.isAssignWorkerModalOpen = true;
-  
-  this.selectedShiftId = '';
-  this.selectedWorkerId = '';
-  this.availableWorkers = [];
-}
+    this.resetModals();
+    this.isAssignWorkerModalOpen = true;
+
+    this.selectedShiftId = '';
+    this.selectedWorkerId = '';
+    this.availableWorkers = [];
+  }
 
   closeAssignWorkerModal() {
     this.isAssignWorkerModalOpen = false;
@@ -263,14 +284,14 @@ export class SupervisorDashboardComponent implements OnInit {
   closeAnnouncementModal() { this.isAnnouncementModalOpen = false; }
 
   // Fetch 'Unassigned' shifts when opening the Open Shifts Modal
-  openOpenShiftsModal() { 
-    this.resetModals(); 
-    this.isOpenShiftsModalOpen = true; 
+  openOpenShiftsModal() {
+    this.resetModals();
+    this.isOpenShiftsModalOpen = true;
     this.isLoadingOpenShifts = true;
 
     this.supervisorService.getShifts(this.currentSupervisorId, 'Unassigned').subscribe({
       next: (data) => {
-        this.openShifts = data || []; 
+        this.openShifts = data || [];
         this.isLoadingOpenShifts = false;
         this.cdr.detectChanges(); // Force the UI to refresh instantly
       },
@@ -285,14 +306,14 @@ export class SupervisorDashboardComponent implements OnInit {
   closeOpenShiftsModal() { this.isOpenShiftsModalOpen = false; }
 
   // Fetch 'Requested' shifts when opening the Status Snapshot (Pending Approval) Modal
-  openStatusSnapshot() { 
-    this.resetModals(); 
-    this.isStatusSnapshotOpen = true; 
+  openStatusSnapshot() {
+    this.resetModals();
+    this.isStatusSnapshotOpen = true;
     this.isLoadingPendingShifts = true;
 
     this.supervisorService.getShifts(this.currentSupervisorId, 'Requested').subscribe({
       next: (data) => {
-        this.pendingApprovalShifts = data || []; 
+        this.pendingApprovalShifts = data || [];
         this.isLoadingPendingShifts = false;
         this.cdr.detectChanges(); // Force the UI to refresh instantly
       },

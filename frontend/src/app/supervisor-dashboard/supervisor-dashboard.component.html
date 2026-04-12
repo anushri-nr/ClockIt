@@ -306,7 +306,30 @@
         </div>
 
         <div class="schedule-grid" *ngIf="scheduleView === 'today'">
+          <div *ngIf="isLoadingSchedule" style="padding: 20px; color: #5a6472;">
+            Loading today's schedule...
           </div>
+          
+          <div *ngIf="!isLoadingSchedule && assignedShifts.length === 0" style="padding: 20px; color: #5a6472;">
+            No shifts are currently assigned.
+          </div>
+
+          <ul class="list compact" *ngIf="!isLoadingSchedule && assignedShifts.length > 0">
+            <li *ngFor="let shift of assignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <div>
+                <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
+                  {{ shift.start_time | date:'MMM d, y' }}
+                </div>
+                <div class="request-sub" style="color: #475569; margin-top: 4px;">
+                  {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                </div>
+                <div class="chip active" style="margin-top: 8px; display: inline-block;">
+                  Assigned to Worker ID: {{ shift.assigned_to }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
         <div class="week-grid" *ngIf="scheduleView === 'week'">
         </div>
       </article>

@@ -68,4 +68,18 @@ describe('SupervisorService', () => {
   it('should be created successfully', () => {
     expect(service).toBeTruthy();
   });
+  
+  it('should fetch assigned shifts for the schedule view', () => {
+    const mockShifts = [{ id: 1, status: 'Assigned', assigned_to: 5 }];
+
+    service.getAssignedShifts().subscribe(shifts => {
+      expect(shifts.length).toBe(1);
+      expect(shifts[0].status).toBe('Assigned');
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/supervisors/shifts/assigned');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockShifts);
+  });
 });
+

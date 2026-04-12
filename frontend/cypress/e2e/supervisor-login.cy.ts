@@ -22,5 +22,9 @@ describe('Supervisor Authentication Flow', () => {
 
     // 7. Verify the UI hydrated with the user data
     cy.contains('Hello,').should('be.visible');
+
+    // Verify the Schedule View loads the grid
+    cy.get('.schedule-grid').should('exist');
+    cy.get('.schedule-grid').contains('Schedule view', { matchCase: false }).should('not.exist'); // Ensure it's not totally broken
   });
 });
