@@ -8,7 +8,7 @@ type WorkerAvailability struct {
 	DayOfWeek int       `json:"day_of_week"`
 	StartTime string    `json:"start_time"`
 	EndTime   string    `json:"end_time"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `gorm:"autoCreateTime;default:CURRENT_TIMESTAMP" json:"created_at"`
 
 	// Relations
 	Worker Employee `gorm:"foreignKey:WorkerID" json:"worker,omitempty"`

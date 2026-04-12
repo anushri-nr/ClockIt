@@ -77,27 +77,44 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 		return nil, errors.New("supervisor not found or insufficient permissions")
 	}
 
-	assignment := models.ShiftAssignment{
-		ShiftID:    shiftID,
-		EmployeeID: employeeID,
-		AssigneeID: assignedBy,
-		Status:     models.StatusAssigned,
-		AssignedAt: time.Now(),
+	// 1. Force an UPDATE if the record already exists (e.g., from a Request)
+	result := database.DB.Table("shift_assignments").
+		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).
+		Updates(map[string]interface{}{
+			"assignee_id": assignedBy,
+			"status":      models.StatusAssigned,
+			"assigned_at": time.Now(),
+		})
+
+	if result.Error != nil {
+		log.Printf("AssignWorkerToShift: DB update error: %v", result.Error)
+		return nil, result.Error
 	}
 
-	if err := database.DB.Create(&assignment).Error; err != nil {
-		log.Printf("AssignWorkerToShift: DB insert failed: %v", err)
+	// 2. If RowsAffected is 0, the record didn't exist, so we MUST insert it.
+	if result.RowsAffected == 0 {
+		newAssignment := models.ShiftAssignment{
+			ShiftID:    shiftID,
+			EmployeeID: employeeID,
+			AssigneeID: assignedBy,
+			Status:     models.StatusAssigned,
+			AssignedAt: time.Now(),
+		}
+		if err := database.DB.Create(&newAssignment).Error; err != nil {
+			log.Printf("AssignWorkerToShift: DB insert failed: %v", err)
+			return nil, err
+		}
+	}
+
+	// 3. Fetch the final record to return and check for errors
+	var assignment models.ShiftAssignment
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").
+		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment).Error; err != nil {
+		log.Printf("AssignWorkerToShift: failed to fetch final assignment: %v", err)
 		return nil, err
 	}
 
-	// Load relations
-	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
-		log.Printf("AssignWorkerToShift: failed to load relations: %v", err)
-		// Assignment created successfully, but relations failed to load
-		// Return the assignment without relations rather than failing the entire operation
-	}
-
-	log.Printf("AssignWorkerToShift: assignment created, id=%d", assignment.ID)
+	log.Printf("AssignWorkerToShift: success for shift=%d", shiftID)
 	return &assignment, nil
 }
 
@@ -141,36 +158,43 @@ func (s *SupervisorService) RejectShiftRequest(supervisorID, shiftID uint) (*mod
 	var out models.ShiftAssignment
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
-		// validate supervisor
+		// 1. Validate supervisor
 		var sup models.Employee
 		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
 			return err
 		}
 
-		// find requested assignment for shift in supervisor's company
+		// 2. Find the exact assignment ID to enforce company boundaries (Copilot Fix)
 		var a models.ShiftAssignment
-		err := tx.
-			Table("shift_assignments as sa").
-			Select("sa.*").
-			Joins("JOIN shifts s ON s.id = sa.shift_id").
-			Joins("JOIN employees creator ON creator.id = s.created_by").
-			Where("sa.shift_id = ?", shiftID).
-			Where("sa.status = ?", models.StatusRequested).
+		err := tx.Table("shift_assignments").
+			Select("shift_assignments.id").
+			Joins("JOIN shifts ON shifts.id = shift_assignments.shift_id").
+			Joins("JOIN employees creator ON creator.id = shifts.created_by").
+			Where("shift_assignments.shift_id = ?", shiftID).
+			Where("shift_assignments.status = ?", models.StatusRequested).
 			Where("creator.company_id = ?", sup.CompanyID).
 			First(&a).Error
+
 		if err != nil {
+			return err // Returns ErrRecordNotFound if cross-company or not requested
+		}
+
+		// 3. Force explicit UPDATE on that specific record
+		if err := tx.Table("shift_assignments").
+			Where("id = ?", a.ID).
+			Updates(map[string]interface{}{
+				"status":      models.StatusReleased,
+				"assignee_id": supervisorID,
+				"assigned_at": time.Now().UTC(),
+			}).Error; err != nil {
 			return err
 		}
 
-		a.Status = models.StatusReleased
-		a.AssigneeID = supervisorID
-		a.AssignedAt = time.Now().UTC()
-
-		if err := tx.Save(&a).Error; err != nil {
+		// 4. Retrieve the updated record and verify no errors (Copilot Fix)
+		if err := tx.Where("id = ?", a.ID).First(&out).Error; err != nil {
 			return err
 		}
 
-		out = a
 		return nil
 	})
 
