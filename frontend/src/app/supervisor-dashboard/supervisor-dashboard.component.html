@@ -257,9 +257,14 @@
       <span class="spacer"></span>
       <div class="user-profile">
         <span>Hello, {{ currentSupervisorName }}</span>
-        <button mat-icon-button type="button">
+        <button mat-icon-button type="button" (click)="toggleProfileMenu()">
           <mat-icon>account_circle</mat-icon>
         </button>
+        <div class="profile-menu" *ngIf="profileMenuOpen">
+          <button class="profile-menu-btn" type="button" (click)="logout()">
+            Logout
+          </button>
+        </div>
       </div>
     </mat-toolbar>
 
@@ -378,6 +383,22 @@
         </article>
         <article class="card">
           <h3>Requests & approvals</h3>
+          <div *ngIf="releasedShiftRequests.length === 0" class="request-empty">
+            No release requests right now.
+          </div>
+          <div class="request" *ngFor="let shift of releasedShiftRequests">
+            <div>
+              <div class="request-title">Release request</div>
+              <div class="request-sub">
+                Shift {{ shift.shift_id || shift.id }} •
+                {{ shift.start_time | date:'MMM d, h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="btn small ghost" type="button" (click)="rejectReleasedShift(shift)">Reject</button>
+              <button class="btn small" type="button" (click)="acceptReleasedShift(shift)">Accept</button>
+            </div>
+          </div>
         </article>
       </aside>
     </section>

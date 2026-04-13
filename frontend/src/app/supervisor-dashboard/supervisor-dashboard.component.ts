@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ShiftService } from '../services/shift.service';
 import { SupervisorService } from '../services/supervisor.service';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-supervisor-dashboard',
@@ -24,6 +25,7 @@ export class SupervisorDashboardComponent implements OnInit {
 
   assignedShifts: any[] = [];
   isLoadingSchedule = false;
+  releasedShiftRequests: any[] = [];
 
   overtimeWorkers: any[] = [];
   isLoadingOvertime = false;
@@ -31,6 +33,7 @@ export class SupervisorDashboardComponent implements OnInit {
   // View State
   currentDateTime = '';
   scheduleView: 'today' | 'week' = 'today';
+  profileMenuOpen = false;
 
   // Modal Flags
   isShiftModalOpen = false;
@@ -65,7 +68,8 @@ export class SupervisorDashboardComponent implements OnInit {
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) { }
 
   ngOnInit() {
@@ -96,12 +100,16 @@ export class SupervisorDashboardComponent implements OnInit {
     this.supervisorService.getAssignedShifts().subscribe({
       next: (data) => {
         this.assignedShifts = data || [];
+        this.applyReleasedFlags();
+        this.updateReleasedShiftRequests();
         this.isLoadingSchedule = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Failed to load assigned schedule', err);
         this.assignedShifts = [];
+        this.applyReleasedFlags();
+        this.updateReleasedShiftRequests();
         this.isLoadingSchedule = false;
         this.cdr.detectChanges();
       }
@@ -116,6 +124,106 @@ export class SupervisorDashboardComponent implements OnInit {
       },
       error: (err) => console.error('Failed to load shifts', err)
     });
+  }
+
+  private updateReleasedShiftRequests() {
+    this.releasedShiftRequests = (this.assignedShifts || []).filter(shift =>
+      (shift?.status || '').toLowerCase() === 'released'
+    );
+  }
+
+  private applyReleasedFlags() {
+    const releasedIds = this.getReleasedShiftIds();
+    if (!releasedIds.length) return;
+    this.assignedShifts = (this.assignedShifts || []).map(shift => {
+      if (releasedIds.includes(shift.id)) {
+        return { ...shift, status: 'released' };
+      }
+      return shift;
+    });
+  }
+
+  private getReleasedShiftIds(): number[] {
+    try {
+      const raw = localStorage.getItem('released_shift_ids');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  acceptReleasedShift(shift: any) {
+    if (!shift) return;
+    this.assignedShifts = this.assignedShifts.map(item => {
+      if (item.id === shift.id) {
+        return { ...item, status: 'unassigned' };
+      }
+      return item;
+    });
+    this.updateAcceptedReleasedStorage(shift.id, true);
+    this.updateReleasedStorage(shift.id, false);
+    this.updateReleasedShiftRequests();
+  }
+
+  rejectReleasedShift(shift: any) {
+    if (!shift) return;
+    this.assignedShifts = this.assignedShifts.map(item => {
+      if (item.id === shift.id) {
+        return { ...item, status: 'assigned' };
+      }
+      return item;
+    });
+    this.updateAcceptedReleasedStorage(shift.id, false);
+    this.updateReleasedStorage(shift.id, false);
+    this.updateReleasedShiftRequests();
+  }
+
+  private updateReleasedStorage(shiftId: number, add: boolean) {
+    const releasedIds = this.getReleasedShiftIds();
+    const exists = releasedIds.includes(shiftId);
+    if (add && !exists) {
+      releasedIds.push(shiftId);
+    }
+    if (!add && exists) {
+      const next = releasedIds.filter(id => id !== shiftId);
+      localStorage.setItem('released_shift_ids', JSON.stringify(next));
+      return;
+    }
+    localStorage.setItem('released_shift_ids', JSON.stringify(releasedIds));
+  }
+
+  private updateAcceptedReleasedStorage(shiftId: number, add: boolean) {
+    const acceptedIds = this.getAcceptedReleasedShiftIds();
+    const exists = acceptedIds.includes(shiftId);
+    if (add && !exists) {
+      acceptedIds.push(shiftId);
+    }
+    if (!add && exists) {
+      const next = acceptedIds.filter(id => id !== shiftId);
+      localStorage.setItem('accepted_released_shift_ids', JSON.stringify(next));
+      return;
+    }
+    localStorage.setItem('accepted_released_shift_ids', JSON.stringify(acceptedIds));
+  }
+
+  private getAcceptedReleasedShiftIds(): number[] {
+    try {
+      const raw = localStorage.getItem('accepted_released_shift_ids');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  toggleProfileMenu() {
+    this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
+  logout() {
+    const role = this.authService.currentUserValue?.role || 'supervisor';
+    this.profileMenuOpen = false;
+    this.authService.logout();
+    this.router.navigate(['/login'], { queryParams: { role } });
   }
 
   loadOvertimeRisk() {
