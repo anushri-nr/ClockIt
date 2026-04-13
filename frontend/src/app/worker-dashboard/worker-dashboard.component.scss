@@ -118,6 +118,38 @@
 
   button mat-icon { color: white; }
 
+  .user-profile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .profile-menu {
+    position: absolute;
+    top: 38px;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid rgba(15, 95, 92, 0.12);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 12px 24px rgba(31, 35, 40, 0.12);
+    z-index: 10;
+  }
+
+  .profile-menu-btn {
+    border: 0;
+    background: #f3faf8;
+    color: #0f5f5c;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
   .weekly-card {
     padding: 24px;
     border-radius: 24px !important;
@@ -176,10 +208,53 @@
     transition: width 250ms ease;
   }
 
+  .weekly-days-wrap {
+    position: relative;
+    padding: 0 44px;
+  }
+
   .weekly-days {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 14px;
+  }
+
+  .weekly-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(15, 95, 92, 0.16);
+    background: #ffffff;
+    color: #0f5f5c;
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(31, 35, 40, 0.12);
+    cursor: pointer;
+    transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  }
+
+  .weekly-nav:hover {
+    background: #f3faf8;
+    box-shadow: 0 8px 18px rgba(31, 35, 40, 0.16);
+  }
+
+  .weekly-nav:active {
+    transform: translateY(-50%) scale(0.96);
+  }
+
+  .weekly-nav-left {
+    left: 0;
+  }
+
+  .weekly-nav-right {
+    right: 0;
   }
 
   .weekly-day {
@@ -314,6 +389,41 @@
     font-size: 0.75rem;
   }
 
+  .upcoming-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .release-btn {
+    border: 1px solid rgba(15, 95, 92, 0.18);
+    background: #ffffff;
+    color: #0f5f5c;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .upcoming-status {
+    min-width: 92px;
+    text-align: right;
+  }
+
+  .release-btn:hover {
+    background: #f3faf8;
+    box-shadow: 0 6px 12px rgba(31, 35, 40, 0.12);
+  }
+
+  .release-btn:active {
+    transform: scale(0.98);
+  }
+
   .upcoming-empty {
     color: #5a6472;
     font-size: 0.95rem;
@@ -331,6 +441,10 @@
 
     .upcoming-item {
       grid-template-columns: 1fr;
+      align-items: flex-start;
+    }
+
+    .upcoming-actions {
       align-items: flex-start;
     }
 

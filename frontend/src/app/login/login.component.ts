@@ -32,6 +32,7 @@ export class LoginComponent implements OnInit {
   password = '';
   currentRole = 'Worker';
   isLoading = false;
+  showPassword = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -69,5 +70,9 @@ export class LoginComponent implements OnInit {
         alert("Login failed!(Check the console)")
       }
     });
+  }
+
+  togglePasswordVisibility() {
+    this.showPassword = !this.showPassword;
   }
 }
