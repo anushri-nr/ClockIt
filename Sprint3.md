@@ -5,6 +5,12 @@ Sprint 3 focused on supervisor workflow improvements, worker shift request flows
 
 ---
 
+## Demo
+
+- Short walkthrough of supervisor and worker flows — [View demo](https://youtu.be/Wn9G6FADJyA?si=hXfYQsOy4CDfXO57)
+
+---
+
 ## Work Completed in Sprint 3
 
 ### Backend
