@@ -6,7 +6,13 @@ import (
 	"errors"
 	"log"
 	"time"
+
+	"gorm.io/gorm"
 )
+
+// ErrAssignmentNotAssigned is returned when attempting to release an assignment
+// that is not currently in the Assigned state.
+var ErrAssignmentNotAssigned = errors.New("assignment must be in Assigned status to be released")
 
 // CreateShift creates a new shift time slot
 func CreateShift(startTime, endTime time.Time, createdBy uint) (*models.Shift, error) {
@@ -71,26 +77,170 @@ func AssignWorkerToShift(shiftID, employeeID, assignedBy uint) (*models.ShiftAss
 		return nil, errors.New("supervisor not found or insufficient permissions")
 	}
 
-	assignment := models.ShiftAssignment{
-		ShiftID:    shiftID,
-		EmployeeID: employeeID,
-		AssigneeID: assignedBy,
-		Status:     models.StatusAssigned,
-		AssignedAt: time.Now(),
+	// 1. Force an UPDATE if the record already exists (e.g., from a Request)
+	result := database.DB.Table("shift_assignments").
+		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).
+		Updates(map[string]interface{}{
+			"assignee_id": assignedBy,
+			"status":      models.StatusAssigned,
+			"assigned_at": time.Now(),
+		})
+
+	if result.Error != nil {
+		log.Printf("AssignWorkerToShift: DB update error: %v", result.Error)
+		return nil, result.Error
 	}
 
-	if err := database.DB.Create(&assignment).Error; err != nil {
-		log.Printf("AssignWorkerToShift: DB insert failed: %v", err)
+	// 2. If RowsAffected is 0, the record didn't exist, so we MUST insert it.
+	if result.RowsAffected == 0 {
+		newAssignment := models.ShiftAssignment{
+			ShiftID:    shiftID,
+			EmployeeID: employeeID,
+			AssigneeID: assignedBy,
+			Status:     models.StatusAssigned,
+			AssignedAt: time.Now(),
+		}
+		if err := database.DB.Create(&newAssignment).Error; err != nil {
+			log.Printf("AssignWorkerToShift: DB insert failed: %v", err)
+			return nil, err
+		}
+	}
+
+	// 3. Fetch the final record to return and check for errors
+	var assignment models.ShiftAssignment
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").
+		Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment).Error; err != nil {
+		log.Printf("AssignWorkerToShift: failed to fetch final assignment: %v", err)
 		return nil, err
 	}
 
-	// Load relations
-	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
-		log.Printf("AssignWorkerToShift: failed to load relations: %v", err)
-		// Assignment created successfully, but relations failed to load
-		// Return the assignment without relations rather than failing the entire operation
+	log.Printf("AssignWorkerToShift: success for shift=%d", shiftID)
+	return &assignment, nil
+}
+
+// ReleaseShiftForWorker marks an existing assignment for a worker as Released
+func ReleaseShiftForWorker(shiftID, employeeID uint) (*models.ShiftAssignment, error) {
+	log.Printf("ReleaseShiftForWorker: shift=%d, employee=%d", shiftID, employeeID)
+
+	var assignment models.ShiftAssignment
+	if err := database.DB.Where("shift_id = ? AND employee_id = ?", shiftID, employeeID).First(&assignment).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: assignment lookup error: %v", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
 	}
 
-	log.Printf("AssignWorkerToShift: assignment created, id=%d", assignment.ID)
+	// Only allow releasing assignments that are currently Assigned
+	if assignment.Status != models.StatusAssigned {
+		return nil, ErrAssignmentNotAssigned
+	}
+
+	assignment.Status = models.StatusReleased
+
+	if err := database.DB.Save(&assignment).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: failed to update assignment: %v", err)
+		return nil, err
+	}
+
+	// Attempt to load relations. If it fails, we still return the assignment
+	if err := database.DB.Preload("Shift").Preload("Employee").Preload("Assignee").First(&assignment, assignment.ID).Error; err != nil {
+		log.Printf("ReleaseShiftForWorker: failed to preload relations: %v", err)
+	}
+
+	log.Printf("ReleaseShiftForWorker: assignment updated, id=%d", assignment.ID)
+	return &assignment, nil
+}
+
+// RejectShiftRequest lets a supervisor reject a requested shift in their company.
+// Status transition: Requested -> Released
+func (s *SupervisorService) RejectShiftRequest(supervisorID, shiftID uint) (*models.ShiftAssignment, error) {
+	var assignment models.ShiftAssignment
+
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+			return err
+		}
+
+		if err := tx.
+			Table("shift_assignments as sa").
+			Select("sa.*").
+			Joins("JOIN shifts s ON s.id = sa.shift_id").
+			Joins("JOIN employees creator ON creator.id = s.created_by").
+			Where("sa.shift_id = ?", shiftID).
+			Where("sa.status = ?", models.StatusRequested).
+			Where("creator.company_id = ?", sup.CompanyID).
+			First(&assignment).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&assignment).Updates(map[string]interface{}{
+			"status":      models.StatusReleased,
+			"assignee_id": supervisorID,
+			"assigned_at": time.Now().UTC(),
+		}).Error; err != nil {
+			return err
+		}
+
+		assignment.Status = models.StatusReleased
+		assignment.AssigneeID = supervisorID
+		assignment.AssignedAt = time.Now().UTC()
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &assignment, nil
+}
+
+
+func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, error) {
+	var assignment models.ShiftAssignment
+
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// validate worker
+		var worker models.Employee
+		if err := tx.
+			Where("id = ? AND role = ?", workerID, models.RoleWorker).
+			First(&worker).Error; err != nil {
+			return err
+		}
+
+		// find one released assignment for this shift in worker's company
+		if err := tx.
+			Table("shift_assignments AS sa").
+			Select("sa.*").
+			Joins("JOIN shifts s ON s.id = sa.shift_id").
+			Joins("JOIN employees creator ON creator.id = s.created_by").
+			Where("sa.shift_id = ?", shiftID).
+			Where("sa.status = ?", models.StatusReleased).
+			Where("creator.company_id = ?", worker.CompanyID).
+			Order("sa.assigned_at DESC").
+			First(&assignment).Error; err != nil {
+			return err
+		}
+
+		// update same row (no new row)
+		now := time.Now().UTC()
+		if err := tx.Model(&assignment).Updates(map[string]interface{}{
+			"employee_id": workerID,
+			"status":      models.StatusRequested,
+			"assigned_at": now,
+		}).Error; err != nil {
+			return err
+		}
+
+		assignment.EmployeeID = workerID
+		assignment.Status = models.StatusRequested
+		assignment.AssignedAt = now
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
 	return &assignment, nil
 }

@@ -44,10 +44,36 @@
 }
 
 .user-profile {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
+}
+
+.profile-menu {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid rgba(15, 95, 92, 0.12);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 12px 24px rgba(31, 35, 40, 0.12);
+  z-index: 10;
+}
+
+.profile-menu-btn {
+  border: 0;
+  background: #f3faf8;
+  color: #0f5f5c;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .spacer {
@@ -837,6 +863,19 @@
 .request-actions {
   display: flex;
   gap: 8px;
+}
+
+.request-actions .btn.ghost {
+  color: #0f5f5c;
+  border: 1px solid rgba(15, 95, 92, 0.35);
+  background: transparent;
+  box-shadow: none;
+}
+
+.request-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 0;
 }
 
 .divider {

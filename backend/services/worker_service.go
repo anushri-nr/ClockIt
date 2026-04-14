@@ -54,17 +54,17 @@ func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftRespo
 		if !a.AssignedAt.IsZero() {
 			r.AssignedAt = a.AssignedAt.Format(time.RFC3339)
 		}
-		
+
 		if a.Shift.ID != 0 {
 			r.StartTime = a.Shift.StartTime.Format(time.RFC3339)
 			r.EndTime = a.Shift.EndTime.Format(time.RFC3339)
-			
+
 			// Issue #38: Wage Calculation
 			duration := a.Shift.EndTime.Sub(a.Shift.StartTime).Hours()
 			r.DurationHours = duration
 			r.Earnings = duration * emp.Wage
 		}
-		
+
 		resp = append(resp, r)
 	}
 
@@ -99,4 +99,31 @@ func CreateWorkerAvailability(workerID uint, dayOfWeek int, startTime string, en
 
 	log.Printf("CreateWorkerAvailability: availability created successfully for worker=%d on day=%d", workerID, dayOfWeek)
 	return availability, nil
+}
+
+// GetReleasedShiftsByEmployeeCompany returns released shifts from the employee's company.
+func (s *WorkerService) GetReleasedShiftsByEmployeeCompany(employeeID uint) ([]models.Shift, error) {
+	var emp models.Employee
+	if err := database.DB.
+		Select("id", "company_id").
+		Where("id = ? AND role = ?", employeeID, models.RoleWorker).
+		First(&emp).Error; err != nil {
+		return []models.Shift{}, err
+	}
+
+	var shifts []models.Shift
+	err := database.DB.
+		Model(&models.Shift{}).
+		Select("DISTINCT shifts.*").
+		Joins("JOIN shift_assignments sa ON sa.shift_id = shifts.id").
+		Joins("JOIN employees creator ON creator.id = shifts.created_by").
+		Where("creator.company_id = ?", emp.CompanyID).
+		Where("sa.status = ?", models.StatusReleased).
+		Order("shifts.start_time ASC").
+		Find(&shifts).Error
+	if err != nil {
+		return []models.Shift{}, err
+	}
+
+	return shifts, nil
 }

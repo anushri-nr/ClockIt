@@ -222,13 +222,26 @@
           </div>
 
           <ul class="list compact" *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length > 0">
-            <li *ngFor="let shift of pendingApprovalShifts">
-              <div>
-                <div class="request-title">
-                  {{ shift.assigned_to || 'A worker' }} requested a shift
+            <li *ngFor="let shift of pendingApprovalShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                  <div class="request-title" style="font-weight: 600;">
+                    Worker: {{ shift.assigned_to || 'Unknown' }} requested a shift
+                  </div>
+                  <div class="request-sub" style="color: #475569; margin-top: 4px;">
+                    {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
+                  </div>
                 </div>
-                <div class="request-sub">
-                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
+                
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn ghost dark" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #cbd5e1;" 
+                          (click)="rejectRequest(shift.shift_id)">
+                    Reject
+                  </button>
+                  <button class="btn primary" style="padding: 6px 12px; font-size: 0.85rem;" 
+                          (click)="approveRequest(shift.shift_id, shift.assigned_to_id)">
+                    Approve
+                  </button>
                 </div>
               </div>
             </li>
@@ -244,9 +257,14 @@
       <span class="spacer"></span>
       <div class="user-profile">
         <span>Hello, {{ currentSupervisorName }}</span>
-        <button mat-icon-button type="button">
+        <button mat-icon-button type="button" (click)="toggleProfileMenu()">
           <mat-icon>account_circle</mat-icon>
         </button>
+        <div class="profile-menu" *ngIf="profileMenuOpen">
+          <button class="profile-menu-btn" type="button" (click)="logout()">
+            Logout
+          </button>
+        </div>
       </div>
     </mat-toolbar>
 
@@ -274,6 +292,10 @@
       </article>
       <article class="summary-card">
         <div class="summary-title">Overtime risk</div>
+        <div style="font-size: 2rem; font-weight: bold; color: #b91c1c; margin-top: 8px;">
+          {{ overtimeWorkers.length }}
+        </div>
+        <p style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">Workers near limit</p>
       </article>
       <article class="summary-card clickable" role="button" tabindex="0" (click)="openStatusSnapshot()">
         <div class="summary-title">Pending approvals</div>
@@ -306,7 +328,30 @@
         </div>
 
         <div class="schedule-grid" *ngIf="scheduleView === 'today'">
+          <div *ngIf="isLoadingSchedule" style="padding: 20px; color: #5a6472;">
+            Loading today's schedule...
           </div>
+          
+          <div *ngIf="!isLoadingSchedule && assignedShifts.length === 0" style="padding: 20px; color: #5a6472;">
+            No shifts are currently assigned.
+          </div>
+
+          <ul class="list compact" *ngIf="!isLoadingSchedule && assignedShifts.length > 0">
+            <li *ngFor="let shift of assignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <div>
+                <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
+                  {{ shift.start_time | date:'MMM d, y' }}
+                </div>
+                <div class="request-sub" style="color: #475569; margin-top: 4px;">
+                  {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                </div>
+                <div class="chip active" style="margin-top: 8px; display: inline-block;">
+                  Assigned to Worker: {{ shift.assigned_to }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
         <div class="week-grid" *ngIf="scheduleView === 'week'">
         </div>
       </article>
@@ -314,9 +359,46 @@
       <aside class="side-panel">
         <article class="card">
           <h3>Alerts & tasks</h3>
+          
+          <div *ngIf="isLoadingOvertime" style="padding: 10px; color: #5a6472; font-size: 0.9rem;">
+            Checking alerts...
+          </div>
+          
+          <div *ngIf="!isLoadingOvertime && overtimeWorkers.length === 0" style="padding: 10px; color: #16a34a; font-size: 0.9rem; background: #f0fdf4; border-radius: 6px; margin-top: 12px;">
+            ✓ No overtime risks this week.
+          </div>
+
+          <ul class="list compact" *ngIf="!isLoadingOvertime && overtimeWorkers.length > 0" style="margin-top: 12px;">
+            <li *ngFor="let worker of overtimeWorkers" style="border-left: 3px solid #ef4444; padding-left: 10px; margin-bottom: 12px;">
+              <div>
+                <div class="request-title" style="font-weight: 600; color: #b91c1c;">
+                  Overtime Warning
+                </div>
+                <div class="request-sub" style="color: #475569; margin-top: 2px;">
+                  Worker: {{ worker.name }} (ID: {{ worker.id }})
+                </div>
+              </div>
+            </li>
+          </ul>
         </article>
         <article class="card">
           <h3>Requests & approvals</h3>
+          <div *ngIf="releasedShiftRequests.length === 0" class="request-empty">
+            No release requests right now.
+          </div>
+          <div class="request" *ngFor="let shift of releasedShiftRequests">
+            <div>
+              <div class="request-title">Release request</div>
+              <div class="request-sub">
+                Shift {{ shift.shift_id || shift.id }} •
+                {{ shift.start_time | date:'MMM d, h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="btn small ghost" type="button" (click)="rejectReleasedShift(shift)">Reject</button>
+              <button class="btn small" type="button" (click)="acceptReleasedShift(shift)">Accept</button>
+            </div>
+          </div>
         </article>
       </aside>
     </section>

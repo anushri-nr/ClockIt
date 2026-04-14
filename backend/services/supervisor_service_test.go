@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"clockit/backend/repository"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func setupServiceTestDB(t *testing.T) {
@@ -136,4 +138,63 @@ func TestWorkerService_GetWorkersAvailable_NoResults(t *testing.T) {
 	resp, err := ws.GetWorkersAvailable(parsed, comp.ID)
 	require.NoError(t, err)
 	require.Len(t, resp, 0)
+}
+
+func TestSupervisorService_GetWorkersWithOvertimeHours_Success(t *testing.T) {
+	setupServiceTestDB(t)
+
+	// create company and supervisor
+	comp := models.Company{Name: "OTCo"}
+	if err := database.DB.Create(&comp).Error; err != nil {
+		t.Fatalf("failed to create company: %v", err)
+	}
+
+	sup, err := RegisterEmployee("SupOT", "supot@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	if err != nil {
+		t.Fatalf("RegisterEmployee failed: %v", err)
+	}
+
+	// create worker
+	worker, err := RegisterEmployee("WOT", "wot@example.com", "pass1234", "addr", "333", comp.ID, 9.0, models.RoleWorker)
+	if err != nil {
+		t.Fatalf("RegisterEmployee worker failed: %v", err)
+	}
+
+	now := time.Now()
+	weekday := int(now.Weekday())
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-weekday, 0, 0, 0, 0, now.Location())
+
+	// create 3 shifts of 8 hours within the week
+	for i := 1; i <= 3; i++ {
+		start := weekStart.Add(time.Duration(i) * 24 * time.Hour)
+		end := start.Add(8 * time.Hour)
+		sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID, CreatedAt: time.Now()}
+		if err := database.DB.Create(&sft).Error; err != nil {
+			t.Fatalf("failed to create shift: %v", err)
+		}
+		sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned}
+		if err := database.DB.Create(&sa).Error; err != nil {
+			t.Fatalf("failed to create assignment: %v", err)
+		}
+	}
+
+	svc := SupervisorService{}
+	resp, err := svc.GetWorkersWithOvertimeHours(sup.ID, weekStart)
+	require.NoError(t, err)
+	require.Len(t, resp, 1)
+	require.Equal(t, worker.ID, resp[0].ID)
+	require.Greater(t, resp[0].TotalHours, 20.0)
+}
+
+func TestSupervisorService_GetWorkersWithOvertimeHours_NotFound(t *testing.T) {
+	setupServiceTestDB(t)
+
+	svc := SupervisorService{}
+	now := time.Now()
+	weekday := int(now.Weekday())
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-weekday, 0, 0, 0, 0, now.Location())
+
+	_, err := svc.GetWorkersWithOvertimeHours(99999, weekStart)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
 }

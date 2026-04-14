@@ -16,6 +16,7 @@ import (
 	"clockit/backend/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestDB(t *testing.T) string {
@@ -320,5 +321,221 @@ func TestGetShiftsByCompany_Controller_ValidationAndSuccess(t *testing.T) {
 	r.ServeHTTP(w3, req3)
 	if w3.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request for invalid employee id, got %d, body=%s", w3.Code, w3.Body.String())
+	}
+}
+
+func TestGetRequestedShifts_Controller_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	// create company and supervisor
+	comp := models.Company{Name: "ReqCo"}
+	if err := database.DB.Create(&comp).Error; err != nil {
+		t.Fatalf("failed to create company: %v", err)
+	}
+
+	sup, err := services.RegisterEmployee("SupReq", "supreq@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	if err != nil {
+		t.Fatalf("RegisterEmployee failed: %v", err)
+	}
+
+	// create worker and a shift with a Requested assignment
+	worker, err := services.RegisterEmployee("WReq", "wreq@example.com", "pass1234", "addr", "333", comp.ID, 9.0, models.RoleWorker)
+	if err != nil {
+		t.Fatalf("RegisterEmployee worker failed: %v", err)
+	}
+
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(8 * time.Hour)
+	sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID, CreatedAt: time.Now()}
+	if err := database.DB.Create(&sft).Error; err != nil {
+		t.Fatalf("failed to create shift: %v", err)
+	}
+
+	sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusRequested}
+	if err := database.DB.Create(&sa).Error; err != nil {
+		t.Fatalf("failed to create shift assignment: %v", err)
+	}
+
+	// Make request and inject authenticated supervisor id into context before handler
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/requested", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/requested", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, sup.ID)
+		GetRequestedShifts(c)
+	})
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d, body=%s", w.Code, w.Body.String())
+	}
+
+	// decode response and check there's one shift with Requested status
+	var resp []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(resp) != 1 {
+		t.Fatalf("expected 1 requested shift, got %d", len(resp))
+	}
+	if fmt.Sprint(resp[0]["status"]) != string(models.StatusRequested) {
+		t.Fatalf("expected status %s, got %v", string(models.StatusRequested), resp[0]["status"])
+	}
+}
+
+func TestGetAssignedShifts_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", GetAssignedShifts)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetAssignedShifts_SupervisorNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+		// mimic auth middleware context
+		c.Set(services.ContextEmployeeID, uint(999999))
+		GetAssignedShifts(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetAssignedShifts_Success_Empty(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	company := models.Company{Name: "Assigned Shift Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	supervisor := models.Employee{
+		Name:      "Sup A",
+		Email:     "sup.assigned@test.local",
+		Password:  "hashed-or-dummy",
+		Role:      models.RoleSupervisor,
+		CompanyID: company.ID,
+		Wage:      40,
+	}
+	require.NoError(t, database.DB.Create(&supervisor).Error)
+
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/assigned", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, supervisor.ID)
+		GetAssignedShifts(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/assigned", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp []map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotNil(t, resp) // can be empty, but valid JSON array
+}
+
+func TestGetWorkersWithOvertimeHours_Controller_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	comp := models.Company{Name: "CtrlOTCo"}
+	if err := database.DB.Create(&comp).Error; err != nil {
+		t.Fatalf("failed to create company: %v", err)
+	}
+
+	sup, err := services.RegisterEmployee("SupCtrl", "supctrl@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	if err != nil {
+		t.Fatalf("RegisterEmployee failed: %v", err)
+	}
+
+	worker, err := services.RegisterEmployee("WCtrl", "wctrl@example.com", "pass1234", "addr", "333", comp.ID, 9.0, models.RoleWorker)
+	if err != nil {
+		t.Fatalf("RegisterEmployee worker failed: %v", err)
+	}
+
+	now := time.Now()
+	weekday := int(now.Weekday())
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-weekday, 0, 0, 0, 0, now.Location())
+
+	for i := 1; i <= 3; i++ {
+		start := weekStart.Add(time.Duration(i) * 24 * time.Hour)
+		end := start.Add(8 * time.Hour)
+		sft := models.Shift{StartTime: start, EndTime: end, CreatedBy: sup.ID, CreatedAt: time.Now()}
+		if err := database.DB.Create(&sft).Error; err != nil {
+			t.Fatalf("failed to create shift: %v", err)
+		}
+		sa := models.ShiftAssignment{ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned}
+		if err := database.DB.Create(&sa).Error; err != nil {
+			t.Fatalf("failed to create shift assignment: %v", err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/workers/overtime", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/workers/overtime", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, sup.ID)
+		GetWorkersWithOvertimeHours(c)
+	})
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d, body=%s", w.Code, w.Body.String())
+	}
+
+	var resp []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(resp) != 1 {
+		t.Fatalf("expected 1 worker over hours, got %d, body=%s", len(resp), w.Body.String())
+	}
+}
+
+func TestGetWorkersWithOvertimeHours_Controller_DBFailure(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	comp := models.Company{Name: "DBFailCo"}
+	if err := database.DB.Create(&comp).Error; err != nil {
+		t.Fatalf("failed to create company: %v", err)
+	}
+
+	sup, err := services.RegisterEmployee("SupDB", "supdb@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	if err != nil {
+		t.Fatalf("RegisterEmployee failed: %v", err)
+	}
+
+	if err := database.DB.Migrator().DropTable(&models.Shift{}); err != nil {
+		t.Fatalf("failed to drop shifts table: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/workers/overtime", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/workers/overtime", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, sup.ID)
+		GetWorkersWithOvertimeHours(c)
+	})
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 Internal Server Error when DB query fails, got %d, body=%s", w.Code, w.Body.String())
 	}
 }

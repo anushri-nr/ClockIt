@@ -9,8 +9,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap, map } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -49,6 +50,7 @@ export class WorkerDashboardComponent implements OnInit {
   myShifts$!: Observable<WorkerShift[]>;
   nextShift: WorkerShift | null = null;
   assignedShifts: WorkerShift[] = [];
+  allShifts: WorkerShift[] = [];
 
   totalHours = 0;
   estEarnings = 0;
@@ -59,10 +61,13 @@ export class WorkerDashboardComponent implements OnInit {
   weeklyProgress = 0;
   weekRangeLabel = '';
   weeklyDays: Array<{ label: string; date: Date; hours: number; percent: number }> = [];
+  weekOffset = 0;
+  profileMenuOpen = false;
 
   constructor(
     private workerService: WorkerService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) { }
 
   colDefs: ColDef[] = [
@@ -102,11 +107,17 @@ export class WorkerDashboardComponent implements OnInit {
     {
       field: 'status',
       flex: 1,
+      valueFormatter: params => {
+        const value = params.value || '';
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      },
       cellStyle: (params) => {
         // Go backend returns lowercase "assigned"
-        const isAssigned = params.value?.toLowerCase() === 'assigned';
+        const status = params.value?.toLowerCase();
+        const isAssigned = status === 'assigned';
+        const isReleased = status === 'released';
         return {
-          color: isAssigned ? '#0f5f5c' : '#666',
+          color: isAssigned ? '#0f5f5c' : isReleased ? '#b45309' : '#666',
           fontWeight: 'bold'
         };
       }
@@ -136,13 +147,26 @@ export class WorkerDashboardComponent implements OnInit {
 
       // 3. Load shifts using the REAL dynamic ID
       this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+        map((data) => {
+          const safeData = data || [];
+          const releasedIds = this.getReleasedShiftIds();
+          const acceptedReleasedIds = this.getAcceptedReleasedShiftIds();
+          const filtered = acceptedReleasedIds.length
+            ? safeData.filter(shift => !acceptedReleasedIds.includes(shift.id))
+            : safeData;
+          if (!releasedIds.length) return filtered;
+          return filtered.map(shift =>
+            releasedIds.includes(shift.id) ? { ...shift, status: 'released' } : shift
+          );
+        }),
         tap((data) => {
           const safeData = data || [];
           console.log("Stream received data:", safeData);
+          this.allShifts = safeData;
           this.calculateStats(safeData);
           this.findNextShift(safeData);
           this.assignedShifts = this.getAssignedShifts(safeData);
-          this.calculateWeeklyAssigned(safeData);
+          this.calculateWeeklyAssigned(safeData, this.getBaseWeekDate());
         })
       );
     } else {
@@ -190,9 +214,75 @@ export class WorkerDashboardComponent implements OnInit {
     return shifts.filter(shift => shift.status?.toLowerCase() === 'assigned');
   }
 
-  calculateWeeklyAssigned(shifts: WorkerShift[]) {
-    const now = new Date();
-    const startOfWeek = this.getStartOfWeek(now);
+  goToPreviousWeek() {
+    this.weekOffset -= 1;
+    this.calculateWeeklyAssigned(this.allShifts, this.getBaseWeekDate());
+  }
+
+  goToNextWeek() {
+    this.weekOffset += 1;
+    this.calculateWeeklyAssigned(this.allShifts, this.getBaseWeekDate());
+  }
+
+  toggleProfileMenu() {
+    this.profileMenuOpen = !this.profileMenuOpen;
+  }
+
+  logout() {
+    const role = this.authService.currentUserValue?.role || 'worker';
+    this.profileMenuOpen = false;
+    this.authService.logout();
+    this.router.navigate(['/login'], { queryParams: { role } });
+  }
+
+  releaseShift(shift: WorkerShift) {
+    if (!shift) return;
+
+    const releasedIds = this.getReleasedShiftIds();
+    if (!releasedIds.includes(shift.id)) {
+      releasedIds.push(shift.id);
+      localStorage.setItem('released_shift_ids', JSON.stringify(releasedIds));
+    }
+
+    this.allShifts = this.allShifts.map(item => {
+      if (item.id === shift.id) {
+        return { ...item, status: 'released' };
+      }
+      return item;
+    });
+
+    this.assignedShifts = this.getAssignedShifts(this.allShifts);
+    this.findNextShift(this.allShifts);
+    this.calculateWeeklyAssigned(this.allShifts, this.getBaseWeekDate());
+    this.myShifts$ = of(this.allShifts);
+  }
+
+  private getReleasedShiftIds(): number[] {
+    try {
+      const raw = localStorage.getItem('released_shift_ids');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private getAcceptedReleasedShiftIds(): number[] {
+    try {
+      const raw = localStorage.getItem('accepted_released_shift_ids');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private getBaseWeekDate() {
+    const base = new Date();
+    base.setDate(base.getDate() + this.weekOffset * 7);
+    return base;
+  }
+
+  calculateWeeklyAssigned(shifts: WorkerShift[], baseDate: Date) {
+    const startOfWeek = this.getStartOfWeek(baseDate);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);

@@ -60,11 +60,31 @@ export class SupervisorService {
   // Backend Route: POST /api/shifts/assign
   assignWorker(shiftId: number, workerId: number): Observable<any> {
     const payload = {
-      shift_id: shiftId,
-      employee_id: workerId,
+      shift_id: Number(shiftId),
+      employee_id: Number(workerId),
     };
     // Note: The route is actually under 'shifts', not 'supervisors'
     // So we use a different base URL for this specific call
     return this.http.post('http://localhost:8080/api/shifts/assign', payload);
+  }
+
+  /// Fetch all assigned shifts for the schedule view
+  getAssignedShifts(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/assigned`);
+  }
+
+  // Fetch shifts that workers have requested
+  getRequestedShifts(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/requested`);
+  }
+
+  // Reject a requested shift
+  rejectShiftRequest(shiftId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/shifts/${shiftId}/reject`, {});
+  }
+
+  // Fetch workers at risk of overtime
+  getOvertimeRiskWorkers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
   }
 }
