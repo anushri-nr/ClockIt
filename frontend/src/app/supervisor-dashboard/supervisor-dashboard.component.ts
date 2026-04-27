@@ -66,6 +66,8 @@ export class SupervisorDashboardComponent implements OnInit {
   isLoadingOpenShifts = false;
   isLoadingPendingShifts = false;
 
+  searchTerm: string = '';
+
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
@@ -495,6 +497,19 @@ export class SupervisorDashboardComponent implements OnInit {
 
   setScheduleView(view: 'today' | 'week') {
     this.scheduleView = view;
+  }
+
+  get filteredAssignedShifts() {
+    if (!this.searchTerm) {
+      return this.assignedShifts;
+    }
+    const lowerTerm = this.searchTerm.toLowerCase();
+    
+    return (this.assignedShifts || []).filter(shift => {
+      // Check if the worker's name includes the search term
+      const workerName = (shift.assigned_to || 'Unassigned').toLowerCase();
+      return workerName.includes(lowerTerm);
+    });
   }
 
   get weekSchedule() {
