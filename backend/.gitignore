@@ -1,0 +1,8 @@
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
+# Compiled binary (built locally before eb deploy)
+main
