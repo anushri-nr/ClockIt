@@ -9,11 +9,12 @@ import { SupervisorService } from '../services/supervisor.service';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { ShiftListComponent } from '../components/shift-list/shift-list.component';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule, MatSnackBarModule, ShiftListComponent],
   templateUrl: './supervisor-dashboard.component.html',
   styleUrl: './supervisor-dashboard.component.scss'
 })

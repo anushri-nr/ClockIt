@@ -103,25 +103,12 @@
       <div class="modal-grid" style="grid-template-columns: 1fr;">
         <div class="panel">
           <h3>Unassigned Shifts</h3>
-          
-          <div *ngIf="isLoadingOpenShifts" style="padding: 10px; color: #5a6472;">
-            Loading open shifts...
-          </div>
-          
-          <div *ngIf="!isLoadingOpenShifts && openShifts.length === 0" style="padding: 10px; color: #5a6472;">
-            Great job! There are currently no unassigned shifts.
-          </div>
-
-          <ul class="list compact" *ngIf="!isLoadingOpenShifts && openShifts.length > 0">
-            <li *ngFor="let shift of openShifts">
-              <div>
-                <div class="request-title">
-                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
-                </div>
-                <div class="request-sub">Status: {{ shift.status }}</div>
-              </div>
-            </li>
-          </ul>
+          <app-shift-list 
+            [shifts]="openShifts" 
+            [isLoading]="isLoadingOpenShifts"
+            loadingMessage="Loading open shifts..."
+            emptyMessage="Great job! There are currently no unassigned shifts.">
+          </app-shift-list>
         </div>
       </div>
     </div>
@@ -212,40 +199,16 @@
       <div class="modal-grid" style="grid-template-columns: 1fr;">
         <div class="panel">
           <h3>Requested Shifts</h3>
-          
-          <div *ngIf="isLoadingPendingShifts" style="padding: 10px; color: #5a6472;">
-            Loading requests...
-          </div>
-          
-          <div *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length === 0" style="padding: 10px; color: #5a6472;">
-            No pending approvals at this time.
-          </div>
-
-          <ul class="list compact" *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length > 0">
-            <li *ngFor="let shift of pendingApprovalShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
-                  <div class="request-title" style="font-weight: 600;">
-                    Worker: {{ shift.assigned_to || 'Unknown' }} requested a shift
-                  </div>
-                  <div class="request-sub" style="color: #475569; margin-top: 4px;">
-                    {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
-                  </div>
-                </div>
-                
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn ghost dark" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #cbd5e1;" 
-                          (click)="rejectRequest(shift.shift_id)">
-                    Reject
-                  </button>
-                  <button class="btn primary" style="padding: 6px 12px; font-size: 0.85rem;" 
-                          (click)="approveRequest(shift.shift_id, shift.assigned_to_id)">
-                    Approve
-                  </button>
-                </div>
-              </div>
-            </li>
-          </ul>
+          <app-shift-list 
+            [shifts]="pendingApprovalShifts" 
+            [isLoading]="isLoadingPendingShifts"
+            loadingMessage="Loading requests..."
+            emptyMessage="No pending approvals at this time."
+            [showWorkerName]="true"
+            [showActions]="true"
+            (onReject)="rejectRequest($event)"
+            (onApprove)="approveRequest($event.shift_id, $event.assigned_to_id)">
+          </app-shift-list>
         </div>
       </div>
     </div>
