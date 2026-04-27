@@ -42,13 +42,18 @@ func main() {
 		log.Fatalf("failed to initialize auth: %v", err)
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	r := gin.Default()
 
 	r.Use(CORSMiddleware())
 
 	routes.RegisterRoutes(r) // Configure HTTP server with proper timeouts
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + port,
 		Handler:           r,
 		ReadTimeout:       10 * time.Second, // max time to read request body
 		ReadHeaderTimeout: 5 * time.Second,  // max time to read headers
@@ -56,7 +61,7 @@ func main() {
 		IdleTimeout:       60 * time.Second, // max time for keep-alive connections
 	}
 
-	log.Println("Starting ClockIt server on :8080")
+	log.Printf("Starting ClockIt server on :%s", port)
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed: %v", err)
@@ -64,8 +69,12 @@ func main() {
 }
 
 func CORSMiddleware() gin.HandlerFunc {
+	origin := os.Getenv("CORS_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:4200"
+	}
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")

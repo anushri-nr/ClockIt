@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 // Interface matching the Go Model exactly
 export interface Company {
@@ -15,7 +16,7 @@ export interface Company {
 export class CompanyService {
 
   // The endpoint defined in routes.go: companyRoutes.GET("/", controllers.ListCompanies)
-  private apiUrl = 'http://localhost:8080/api/companies/'; 
+  private apiUrl = `${environment.apiUrl}/companies/`; 
 
   constructor(private http: HttpClient) { }
 
