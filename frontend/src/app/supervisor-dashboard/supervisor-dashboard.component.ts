@@ -494,6 +494,33 @@ export class SupervisorDashboardComponent implements OnInit {
     this.scheduleView = view;
   }
 
+  get weekSchedule() {
+    const days = [];
+    const today = new Date();
+    
+    // Generate an array for Today + the next 6 days
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date();
+      currentDate.setDate(today.getDate() + i);
+      
+      // Find all shifts that match this specific date
+      const dayShifts = (this.assignedShifts || []).filter(shift => {
+        if (!shift.start_time) return false;
+        const shiftDate = new Date(shift.start_time);
+        return shiftDate.toDateString() === currentDate.toDateString();
+      });
+
+      // Sort shifts by start time so morning shifts appear at the top
+      dayShifts.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+      days.push({
+        date: currentDate,
+        shifts: dayShifts
+      });
+    }
+    return days;
+  }
+
   private updateDateTime() {
     const now = new Date();
     this.currentDateTime = new Intl.DateTimeFormat('en-US', {
