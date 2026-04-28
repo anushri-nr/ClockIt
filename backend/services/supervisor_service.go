@@ -52,6 +52,20 @@ func (s *WorkerService) GetWorkersAvailable(date time.Time, companyID uint) ([]W
 	return response, nil
 }
 
+func (s *SupervisorService) GetCompanyWorkers(supervisorID uint) ([]models.Employee, error) {
+	var supervisor models.Employee
+	if err := database.DB.First(&supervisor, supervisorID).Error; err != nil {
+		return nil, errors.New("supervisor not found")
+	}
+
+	var workers []models.Employee
+	err := database.DB.Where("company_id = ? AND role = ?", supervisor.CompanyID, models.RoleWorker).
+		Select("id", "name", "email", "phone_no", "address"). // Only return necessary info
+		Find(&workers).Error
+
+	return workers, err
+}
+
 type CreatedShiftsResponse struct {
 	ID        uint   `json:"id"`
 	ShiftID   uint   `json:"shift_id"`

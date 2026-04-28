@@ -97,4 +97,9 @@ export class SupervisorService {
   unassignWorker(shiftId: number): Observable<any> {
     return this.http.patch(`http://localhost:8080/api/shifts/${shiftId}/unassign`, {});
   }
+
+  getCompanyWorkers(): Observable<Worker[]> {
+    // Using the authenticated route
+    return this.http.get<Worker[]>(`${this.apiUrl}/company/workers`);
+  }
 }

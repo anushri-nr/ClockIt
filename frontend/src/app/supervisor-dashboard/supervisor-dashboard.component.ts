@@ -68,6 +68,10 @@ export class SupervisorDashboardComponent implements OnInit {
 
   searchTerm: string = '';
 
+  isWorkerDirectoryOpen = false;
+  companyWorkers: any[] = [];
+  isLoadingWorkersList = false;
+
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
@@ -323,10 +327,12 @@ export class SupervisorDashboardComponent implements OnInit {
         console.log("Worker assigned successfully");
 
         this.closeAssignWorkerModal();
-        this.cdr.detectChanges();
-
+        
         // Refresh the grid to show the new assignment
         this.loadShifts();
+        this.loadAssignedSchedule();
+
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Assignment failed', err);
@@ -471,6 +477,30 @@ export class SupervisorDashboardComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  openWorkerDirectory() {
+    this.resetModals();
+    this.isWorkerDirectoryOpen = true;
+    this.isLoadingWorkersList = true;
+
+    this.supervisorService.getCompanyWorkers().subscribe({
+      next: (data) => {
+        this.companyWorkers = data || [];
+        this.isLoadingWorkersList = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load directory', err);
+        this.showToast('Could not load worker directory.', true);
+        this.isLoadingWorkersList = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeWorkerDirectory() {
+    this.isWorkerDirectoryOpen = false;
   }
 
   // ISSUE #73 & #77: Approve Action

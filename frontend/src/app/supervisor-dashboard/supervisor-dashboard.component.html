@@ -215,6 +215,44 @@
     </div>
   </section>
 
+  <section *ngIf="isWorkerDirectoryOpen" class="shift-modal open" aria-label="Worker Directory">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Human Resources</div>
+          <h2>Worker Directory</h2>
+          <p>Contact information for all employees in your company.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeWorkerDirectory()">Close</button>
+        </div>
+      </div>
+
+      <div class="modal-grid" style="grid-template-columns: 1fr;">
+        <div class="panel">
+          <div *ngIf="isLoadingWorkersList" style="padding: 20px; text-align: center;">Loading directory...</div>
+          
+          <table *ngIf="!isLoadingWorkersList" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
+                <th style="padding: 12px;">Name</th>
+                <th style="padding: 12px;">Email</th>
+                <th style="padding: 12px;">Phone</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let worker of companyWorkers" style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px; font-weight: 600;">{{ worker.name }}</td>
+                <td style="padding: 12px; color: #3b82f6;">{{ worker.email }}</td>
+                <td style="padding: 12px; color: #475569;">{{ worker.phone_no || 'N/A' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div class="dashboard-content">
     <mat-toolbar class="custom-toolbar">
       <a class="brand" routerLink="/" style="text-decoration: none; color: inherit; cursor: pointer;">
@@ -265,6 +303,13 @@
       </article>
       <article class="summary-card clickable" role="button" tabindex="0" (click)="openStatusSnapshot()">
         <div class="summary-title">Pending approvals</div>
+      </article>
+      <article class="summary-card clickable" role="button" tabindex="0" (click)="openWorkerDirectory()">
+        <div class="summary-title">Worker Directory</div>
+        <div style="margin-top: 8px; color: #64748b;">
+          <mat-icon>contacts</mat-icon>
+        </div>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">View team contact info</p>
       </article>
     </section>
 

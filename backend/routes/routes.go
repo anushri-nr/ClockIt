@@ -39,6 +39,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetAssignedShifts,
 		)
+		supervisorRoutes.GET("/company/workers",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.GetCompanyWorkers,
+		)
 	}
 
 	workerRoutes := r.Group("/api/workers")
