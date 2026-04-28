@@ -555,6 +555,15 @@ export class SupervisorDashboardComponent implements OnInit {
     });
   }
 
+  // Calculates how many workers are scheduled for today
+  get todaysCoverageCount(): number {
+    const today = new Date().toDateString();
+    return (this.assignedShifts || []).filter(shift => {
+      if (!shift.start_time) return false;
+      return new Date(shift.start_time).toDateString() === today;
+    }).length;
+  }
+
   get weekSchedule() {
     const days = [];
     const today = new Date();
