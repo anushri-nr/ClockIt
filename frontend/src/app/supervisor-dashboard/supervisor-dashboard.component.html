@@ -136,9 +136,8 @@
         </div>
 
         <div class="panel">
-          <h3>Shifts created</h3>
-          <ul class="list compact">
-            <li *ngFor="let shift of shifts">
+          <h3>Open Shifts</h3> <ul class="list compact">
+            <li *ngFor="let shift of openShifts">
               <div>
                 <div class="request-title">
                   {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
@@ -151,10 +150,10 @@
         <div class="panel">
           <h3>Assignment</h3>
           <label class="field">
-            <span>Select shift</span>
+            <span>Select open shift</span>
             <select class="input" [(ngModel)]="selectedShiftId" (ngModelChange)="onShiftSelected()">
               <option value="">Choose a shift</option>
-              <option *ngFor="let shift of shifts" [value]="shift.id">
+              <option *ngFor="let shift of openShifts" [value]="shift.id || shift.shift_id">
                 {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
               </option>
             </select>
@@ -311,16 +310,23 @@
 
           <ul class="list compact" *ngIf="!isLoadingSchedule && filteredAssignedShifts.length > 0">
             <li *ngFor="let shift of filteredAssignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <div>
-                <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
-                  {{ shift.start_time | date:'MMM d, y' }}
+             <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
+                    {{ shift.start_time | date:'MMM d, y' }}
+                  </div>
+                  <div class="request-sub" style="color: #475569; margin-top: 4px;">
+                    {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                  </div>
+                  <div class="chip active" style="margin-top: 8px; display: inline-block;">
+                    Assigned to Worker: {{ shift.assigned_to || 'Unassigned' }}
+                  </div>
                 </div>
-                <div class="request-sub" style="color: #475569; margin-top: 4px;">
-                  {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
-                </div>
-                <div class="chip active" style="margin-top: 8px; display: inline-block;">
-                  Assigned to Worker: {{ shift.assigned_to || 'Unassigned' }}
-                </div>
+                
+                <button class="btn ghost dark" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #f59e0b; color: #d97706;" 
+                        (click)="unassignShift(shift.shift_id || shift.id)">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle;">person_remove</mat-icon> Remove
+                </button>
               </div>
             </li>
           </ul>

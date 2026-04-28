@@ -93,4 +93,8 @@ export class SupervisorService {
     return this.http.delete(`http://localhost:8080/api/shifts/${shiftId}`);
   }
 
+  // Unassign a worker from a shift
+  unassignWorker(shiftId: number): Observable<any> {
+    return this.http.patch(`http://localhost:8080/api/shifts/${shiftId}/unassign`, {});
+  }
 }

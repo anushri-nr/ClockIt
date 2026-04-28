@@ -95,6 +95,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.DeleteShift,
 		)
+		shiftRoutes.PATCH("/:shift_id/unassign",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.UnassignWorker,
+		)
 	}
 
 	companyRoutes := r.Group("/api/companies")

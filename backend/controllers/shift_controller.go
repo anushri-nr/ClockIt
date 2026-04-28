@@ -248,3 +248,29 @@ func DeleteShift(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "shift deleted successfully"})
 }
+
+// UnassignWorker removes a worker from a shift
+func UnassignWorker(c *gin.Context) {
+	// Extract supervisor ID from JWT
+	authIDVal, exists := c.Get(services.ContextEmployeeID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	supervisorID := authIDVal.(uint)
+
+	// Extract shift_id from URL
+	shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+		return
+	}
+
+	if err := services.UnassignWorkerFromShift(uint(shiftID64), supervisorID); err != nil {
+		log.Printf("Failed to unassign worker: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "worker unassigned successfully"})
+}

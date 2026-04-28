@@ -354,7 +354,7 @@ export class SupervisorDashboardComponent implements OnInit {
 
     // 2. Find the full shift object to get its date
     // We cast to 'any' to avoid type errors with snake_case
-    const shift: any = this.shifts.find((s: any) => s.id == this.selectedShiftId);
+    const shift: any = this.openShifts.find((s: any) => (s.id == this.selectedShiftId || s.shift_id == this.selectedShiftId));
 
     if (shift) {
       this.isLoadingWorkers = true;
@@ -412,6 +412,14 @@ export class SupervisorDashboardComponent implements OnInit {
     this.selectedShiftId = '';
     this.selectedWorkerId = '';
     this.availableWorkers = [];
+
+    this.supervisorService.getShifts(this.currentSupervisorId, 'Unassigned').subscribe({
+      next: (data) => {
+        this.openShifts = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to load unassigned shifts', err)
+    });
   }
 
   closeAssignWorkerModal() {
@@ -569,6 +577,26 @@ export class SupervisorDashboardComponent implements OnInit {
       error: (err) => {
         console.error('Failed to delete shift', err);
         this.showToast('Failed to delete shift.', true);
+      }
+    });
+  }
+  
+  unassignShift(shiftId: number) {
+    if (!confirm('Are you sure you want to remove this worker from the shift?')) return;
+
+    this.supervisorService.unassignWorker(shiftId).subscribe({
+      next: () => {
+        this.showToast('Worker unassigned successfully!', false);
+        
+        // Refresh the schedule grid
+        this.loadAssignedSchedule();
+        
+        // Refresh the shifts list so the Unassigned modal gets updated
+        this.loadShifts(); 
+      },
+      error: (err) => {
+        console.error('Failed to unassign worker', err);
+        this.showToast(err.error?.error || 'Failed to unassign worker.', true);
       }
     });
   }
