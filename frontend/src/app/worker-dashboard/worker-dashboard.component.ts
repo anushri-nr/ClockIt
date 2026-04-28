@@ -12,6 +12,9 @@ import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, of, tap, map } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms'; // Add this
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar'; // Add this
+import { AvailabilityPayload } from '../services/worker.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -28,6 +31,8 @@ interface Shift {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    MatSnackBarModule,
     AgGridAngular,
     MatToolbarModule,
     MatButtonModule,
@@ -64,10 +69,29 @@ export class WorkerDashboardComponent implements OnInit {
   weekOffset = 0;
   profileMenuOpen = false;
 
+  isAvailabilityModalOpen = false;
+  availabilityForm: AvailabilityPayload = {
+    day_of_week: 1, // Default to Monday
+    start_time: '09:00',
+    end_time: '17:00'
+  };
+  isSubmittingAvailability = false;
+
+  daysList = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
+
   constructor(
     private workerService: WorkerService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) { }
 
   colDefs: ColDef[] = [
@@ -174,6 +198,54 @@ export class WorkerDashboardComponent implements OnInit {
     }
   }
 
+  openAvailabilityModal() {
+    this.isAvailabilityModalOpen = true;
+  }
+
+  closeAvailabilityModal() {
+    this.isAvailabilityModalOpen = false;
+    this.availabilityForm = {
+      day_of_week: 1, // Default back to Monday
+      start_time: '09:00',
+      end_time: '17:00'
+    };
+  }
+
+  submitAvailability() {
+    if (this.isSubmittingAvailability) return;
+    
+    // Wrap in setTimeout to escape the Angular NG0100 Change Detection trap
+    setTimeout(() => {
+      this.isSubmittingAvailability = true;
+    });
+
+    // 100% force the day into an integer (HTML dropdowns output strings by default)
+    const payload: AvailabilityPayload = {
+      day_of_week: parseInt(this.availabilityForm.day_of_week as any, 10),
+      start_time: this.availabilityForm.start_time,
+      end_time: this.availabilityForm.end_time
+    };
+
+    this.workerService.createAvailability(this.currentWorkerId, payload).subscribe({
+      next: () => {
+        this.snackBar.open('Availability saved successfully!', 'Close', { duration: 3000 });
+        
+        setTimeout(() => {
+          this.isSubmittingAvailability = false;
+          this.closeAvailabilityModal();
+        });
+      },
+      error: (err) => {
+        console.error('Failed to update availability', err);
+        this.snackBar.open('Failed to save availability.', 'Close', { duration: 3000 });
+        
+        setTimeout(() => {
+          this.isSubmittingAvailability = false;
+        });
+      }
+    });
+  }
+
   calculateStats(shifts: WorkerShift[]) {
     this.totalHours = 0;
 
@@ -238,23 +310,30 @@ export class WorkerDashboardComponent implements OnInit {
   releaseShift(shift: WorkerShift) {
     if (!shift) return;
 
-    const releasedIds = this.getReleasedShiftIds();
-    if (!releasedIds.includes(shift.id)) {
-      releasedIds.push(shift.id);
-      localStorage.setItem('released_shift_ids', JSON.stringify(releasedIds));
-    }
+    if (!confirm('Are you sure you want to release this shift?')) return;
 
-    this.allShifts = this.allShifts.map(item => {
-      if (item.id === shift.id) {
-        return { ...item, status: 'released' };
+    // Send the actual shift_id to the Go backend
+    this.workerService.releaseShift(shift.shift_id).subscribe({
+      next: () => {
+        this.snackBar.open('Shift released successfully!', 'Close', { duration: 3000 });
+        
+        // Reload all shifts from the database to get the true state
+        this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+          tap((data) => {
+            const safeData = data || [];
+            this.allShifts = safeData;
+            this.calculateStats(safeData);
+            this.findNextShift(safeData);
+            this.assignedShifts = this.getAssignedShifts(safeData);
+            this.calculateWeeklyAssigned(safeData, this.getBaseWeekDate());
+          })
+        );
+      },
+      error: (err) => {
+        console.error('Failed to release shift', err);
+        this.snackBar.open(err.error?.error || 'Failed to release shift', 'Close', { duration: 3000 });
       }
-      return item;
     });
-
-    this.assignedShifts = this.getAssignedShifts(this.allShifts);
-    this.findNextShift(this.allShifts);
-    this.calculateWeeklyAssigned(this.allShifts, this.getBaseWeekDate());
-    this.myShifts$ = of(this.allShifts);
   }
 
   private getReleasedShiftIds(): number[] {

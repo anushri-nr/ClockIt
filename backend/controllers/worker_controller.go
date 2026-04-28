@@ -225,7 +225,7 @@ func GetShiftsForWorker(c *gin.Context) {
 // CreateAvailability allows a worker to set their availability for a specific day of the week
 func CreateAvailability(c *gin.Context) {
 	type Req struct {
-		DayOfWeek int    `json:"day_of_week" binding:"required,min=0,max=6"`
+		DayOfWeek int    `json:"day_of_week" binding:"min=0,max=6"`
 		StartTime string `json:"start_time" binding:"required"`
 		EndTime   string `json:"end_time" binding:"required"`
 	}

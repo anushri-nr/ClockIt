@@ -89,9 +89,7 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 			log.Printf("GetShiftsByCompany: supervisor not found: %v", err)
 			return []CreatedShiftsResponse{}, gorm.ErrRecordNotFound
 		}
-
 		log.Printf("GetShiftsByCompany: DB error validating supervisor: %v", err)
-
 		return []CreatedShiftsResponse{}, err
 	}
 
@@ -106,9 +104,15 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		query = query.Joins("LEFT JOIN shift_assignments ON shift_assignments.shift_id = shifts.id").
 			Group("shifts.id")
 
-		// If Unassigned, only check for IS NULL since it's not a saved DB value
+		// If Unassigned, check for NO assignment OR an assignment that was Released/Rejected
 		if statusFilter == string(models.StatusUnassigned) {
-			query = query.Where("shift_assignments.id IS NULL")
+			query = query.Where("shift_assignments.id IS NULL OR shift_assignments.status IN (?, ?)", models.StatusReleased, models.StatusRejected)
+			
+			// Preload those specific assignments so we don't crash when parsing
+			query = query.Preload("Assignments", func(db *gorm.DB) *gorm.DB {
+				return db.Where("status IN (?, ?)", models.StatusReleased, models.StatusRejected).Order("assigned_at DESC")
+			}).Preload("Assignments.Employee").Preload("Assignments.Assignee")
+			
 		} else {
 			query = query.Where("shift_assignments.status = ?", statusFilter)
 			// Preload only assignments that match the filter, order most recent first
@@ -135,17 +139,30 @@ func (s *SupervisorService) GetShiftsByCompany(supervisorID uint, statusFilter s
 		var assignedTo string
 		var assignedToID uint
 
-		// Use the new Enum as the default string
 		status := string(models.StatusUnassigned)
 
+		// Safely parse the assignment data if it exists
 		if len(sft.Assignments) > 0 {
 			a := sft.Assignments[0]
-			assignedBy = a.AssigneeID
 			status = string(a.Status)
-			if a.Employee.ID != 0 {
-				assignedTo = a.Employee.Name
-				assignedToID = a.Employee.ID
+
+			// If the shift is Released or Rejected, wipe the worker's name 
+			// and force the status back to Unassigned so the UI drops it from the schedule!
+			if status == string(models.StatusReleased) || status == string(models.StatusRejected) {
+				status = string(models.StatusUnassigned)
+			} else {
+				// Only attach the worker's name if they are actively Assigned or Requested
+				assignedBy = a.AssigneeID
+				if a.Employee.ID != 0 {
+					assignedTo = a.Employee.Name
+					assignedToID = a.Employee.ID
+				}
 			}
+		}
+
+		// Fallback safety catch
+		if statusFilter == string(models.StatusUnassigned) {
+			status = string(models.StatusUnassigned)
 		}
 
 		sc := CreatedShiftsResponse{
