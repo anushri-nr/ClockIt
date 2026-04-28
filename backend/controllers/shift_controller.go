@@ -217,3 +217,34 @@ func RequestShift(c *gin.Context) {
 
 	c.JSON(http.StatusOK, assignment)
 }
+
+// DeleteShift completely removes a shift
+func DeleteShift(c *gin.Context) {
+	// Extract the ID directly from the validated JWT Token
+	authIDVal, exists := c.Get(services.ContextEmployeeID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+	supervisorID := authIDVal.(uint)
+
+	// Extract the shift_id from the URL
+	shiftID64, err := strconv.ParseUint(c.Param("shift_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid shift_id"})
+		return
+	}
+
+	// Call the service
+	if err := services.DeleteShift(uint(shiftID64), supervisorID); err != nil {
+		log.Printf("Failed to delete shift: %v", err)
+		if err.Error() == "unauthorized to delete shifts outside your company" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete shift"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "shift deleted successfully"})
+}

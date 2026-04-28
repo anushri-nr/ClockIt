@@ -107,7 +107,9 @@
             [shifts]="openShifts" 
             [isLoading]="isLoadingOpenShifts"
             loadingMessage="Loading open shifts..."
-            emptyMessage="Great job! There are currently no unassigned shifts.">
+            emptyMessage="Great job! There are currently no unassigned shifts."
+            [showDelete]="true"
+            (onDelete)="deleteShift($event)">
           </app-shift-list>
         </div>
       </div>
@@ -150,7 +152,7 @@
           <h3>Assignment</h3>
           <label class="field">
             <span>Select shift</span>
-            <select class="input" [(ngModel)]="selectedShiftId" (change)="onShiftSelected()">
+            <select class="input" [(ngModel)]="selectedShiftId" (ngModelChange)="onShiftSelected()">
               <option value="">Choose a shift</option>
               <option *ngFor="let shift of shifts" [value]="shift.id">
                 {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}

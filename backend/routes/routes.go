@@ -90,6 +90,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.WorkerAuthorizationMiddleware(),
 			controllers.RequestShift,
 		)
+		shiftRoutes.DELETE("/:shift_id",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.DeleteShift,
+		)
 	}
 
 	companyRoutes := r.Group("/api/companies")

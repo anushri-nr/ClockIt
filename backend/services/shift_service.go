@@ -244,3 +244,36 @@ func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, erro
 	}
 	return &assignment, nil
 }
+
+// DeleteShift completely removes a shift and any associated assignments
+func DeleteShift(shiftID uint, supervisorID uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Verify supervisor exists
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+			return errors.New("supervisor not found")
+		}
+
+		// 2. Verify shift exists and belongs to the supervisor's company
+		var shift models.Shift
+		if err := tx.Preload("Creator").First(&shift, shiftID).Error; err != nil {
+			return errors.New("shift not found")
+		}
+		
+		if shift.Creator.CompanyID != sup.CompanyID {
+			return errors.New("unauthorized to delete shifts outside your company")
+		}
+
+		// 3. Delete related shift assignments first (prevents foreign key constraint errors)
+		if err := tx.Where("shift_id = ?", shiftID).Delete(&models.ShiftAssignment{}).Error; err != nil {
+			return err
+		}
+
+		// 4. Delete the shift itself
+		if err := tx.Delete(&models.Shift{}, shiftID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}

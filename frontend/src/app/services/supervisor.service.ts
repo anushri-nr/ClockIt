@@ -87,4 +87,10 @@ export class SupervisorService {
   getOvertimeRiskWorkers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
   }
+
+  // Delete a shift
+  deleteShift(shiftId: number): Observable<any> {
+    return this.http.delete(`http://localhost:8080/api/shifts/${shiftId}`);
+  }
+
 }

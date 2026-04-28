@@ -358,6 +358,7 @@ export class SupervisorDashboardComponent implements OnInit {
 
     if (shift) {
       this.isLoadingWorkers = true;
+      this.cdr.detectChanges();
 
       // 3. Extract the date (YYYY-MM-DD) from the shift's start time
       // Example: "2026-02-18T09:00:00Z" -> "2026-02-18"
@@ -369,10 +370,14 @@ export class SupervisorDashboardComponent implements OnInit {
           this.availableWorkers = data;
           this.isLoadingWorkers = false;
           console.log(`Loaded ${data.length} workers for date: ${dateStr}`);
+
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Failed to load workers for selected shift', err);
           this.isLoadingWorkers = false;
+
+          this.cdr.detectChanges();
         }
       });
     }
@@ -545,6 +550,26 @@ export class SupervisorDashboardComponent implements OnInit {
       horizontalPosition: 'right',
       verticalPosition: 'bottom',
       panelClass: isError ? ['toast-error'] : ['toast-success']
+    });
+  }
+
+  deleteShift(shiftId: number) {
+    if (!confirm('Are you sure you want to completely delete this shift?')) return;
+
+    this.supervisorService.deleteShift(shiftId).subscribe({
+      next: () => {
+        this.showToast('Shift deleted successfully!', false);
+        // Refresh the open shifts modal so it disappears instantly
+        this.openOpenShiftsModal(); 
+        // Also refresh the main grid just in case
+        this.loadAssignedSchedule();
+        // Refresh the raw shifts list so the Assign Worker modal updates!
+        this.loadShifts();
+      },
+      error: (err) => {
+        console.error('Failed to delete shift', err);
+        this.showToast('Failed to delete shift.', true);
+      }
     });
   }
 
