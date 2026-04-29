@@ -434,20 +434,29 @@
         </article>
         <article class="card">
           <h3>Requests & approvals</h3>
-          <div *ngIf="releasedShiftRequests.length === 0" class="request-empty">
-            No release requests right now.
+          <div *ngIf="pendingApprovalShifts.length === 0" class="request-empty">
+            No pending requests right now.
           </div>
-          <div class="request" *ngFor="let shift of releasedShiftRequests">
+          
+          <div class="request" *ngFor="let shift of pendingApprovalShifts">
             <div>
-              <div class="request-title">Release request</div>
+              <div class="request-title">Shift Request</div>
               <div class="request-sub">
-                Shift {{ shift.shift_id || shift.id }} •
-                {{ shift.start_time | date:'MMM d, h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                {{ shift.assigned_to }} • {{ shift.start_time | date:'MMM d, h:mm a' }}
               </div>
             </div>
             <div class="request-actions">
-              <button class="btn small ghost" type="button" (click)="rejectReleasedShift(shift)">Reject</button>
-              <button class="btn small" type="button" (click)="acceptReleasedShift(shift)">Accept</button>
+              <button class="btn small ghost dark" type="button" 
+                      style="color: #d64545; border-color: rgba(214, 69, 69, 0.4); display: inline-flex; align-items: center; gap: 4px;"
+                      (click)="rejectRequest(shift.shift_id || shift.id)">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">delete</mat-icon> Reject
+              </button>
+              
+              <button class="btn small primary" type="button" 
+                      style="background: #0f5f5c; display: inline-flex; align-items: center; gap: 4px;"
+                      (click)="approveRequest(shift.shift_id || shift.id, shift.assigned_to_id)">
+                <mat-icon style="font-size: 16px; width: 16px; height: 16px;">check_circle</mat-icon> Approve
+              </button>
             </div>
           </div>
         </article>
