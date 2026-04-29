@@ -54,8 +54,8 @@ func (s *WorkerService) GetWorkersAvailable(date time.Time, companyID uint) ([]W
 
 func (s *SupervisorService) GetCompanyWorkers(supervisorID uint) ([]models.Employee, error) {
 	var supervisor models.Employee
-	if err := database.DB.First(&supervisor, supervisorID).Error; err != nil {
-		return nil, errors.New("supervisor not found")
+	if err := database.DB.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&supervisor).Error; err != nil {
+		return nil, err
 	}
 
 	var workers []models.Employee
