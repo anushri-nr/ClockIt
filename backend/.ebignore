@@ -1,0 +1,20 @@
+# Secrets and local config
+.env
+
+# SQLite database files (recreated on start via AutoMigrate)
+*.db
+*.sqlite
+*.sqlite3
+database/database.db
+
+# OS junk
+.DS_Store
+
+# Local test artifacts
+*.out
+*.test
+
+# Go source — pre-built binary is shipped instead, don't let EB try to rebuild
+go.mod
+go.sum
+*.go

@@ -147,6 +147,42 @@
     </div>
 
     <div class="grid-section">
+      <h2>Earnings Summary</h2>
+      <mat-card class="earnings-card">
+        <div class="earnings-header">
+          <div>
+            <div class="earnings-title">Estimated Total Earnings</div>
+            <div class="earnings-total">{{ estEarnings | currency }}</div>
+            <div class="earnings-sub">{{ totalHours | number:'1.1-1' }} hrs × ${{ hourlyWage }}/hr</div>
+          </div>
+        </div>
+        <div class="earnings-breakdown">
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">This Week</div>
+            <div class="earnings-period-amount">{{ weeklyEarnings | currency }}</div>
+          </div>
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">This Month</div>
+            <div class="earnings-period-amount">{{ monthlyEarnings | currency }}</div>
+          </div>
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">All Time</div>
+            <div class="earnings-period-amount">{{ estEarnings | currency }}</div>
+          </div>
+        </div>
+        <div class="earnings-split">
+          <div class="earnings-split-row">
+            <div class="split-label">
+              <span class="split-dot upcoming-dot"></span>
+              Upcoming Assigned
+            </div>
+            <div class="split-value">{{ upcomingHours | number:'1.1-1' }} hrs &mdash; {{ upcomingHours * hourlyWage | currency }}</div>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+
+    <div class="grid-section">
       <h2>My Schedule</h2>
       <mat-card class="grid-container">
         

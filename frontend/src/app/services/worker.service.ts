@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 // Matches 'AssignedShiftResponse' in backend/services/worker_service.go
 export interface WorkerShift {
@@ -23,7 +24,7 @@ export interface AvailabilityPayload {
 })
 export class WorkerService {
 
-  private apiUrl = 'http://localhost:8080/api/workers';
+  private apiUrl = `${environment.apiUrl}/workers`;
 
   constructor(private http: HttpClient) { }
 

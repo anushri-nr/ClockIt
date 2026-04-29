@@ -8,6 +8,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine) {
+	r.GET("/health", func(c *gin.Context) { c.Status(200) })
 
 	supervisorRoutes := r.Group("/api/supervisors")
 	{
