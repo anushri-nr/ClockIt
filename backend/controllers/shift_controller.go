@@ -268,7 +268,15 @@ func UnassignWorker(c *gin.Context) {
 
 	if err := services.UnassignWorkerFromShift(uint(shiftID64), supervisorID); err != nil {
 		log.Printf("Failed to unassign worker: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+ 			c.JSON(http.StatusNotFound, gin.H{"error": "shift not found"})
+ 			return
+ 		}
+ 		if err.Error() == "unauthorized to unassign shifts outside your company" {
+ 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+ 			return
+ 		}
+ 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unassign worker"})
 		return
 	}
 

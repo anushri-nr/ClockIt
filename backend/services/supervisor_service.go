@@ -60,7 +60,7 @@ func (s *SupervisorService) GetCompanyWorkers(supervisorID uint) ([]models.Emplo
 
 	var workers []models.Employee
 	err := database.DB.Where("company_id = ? AND role = ?", supervisor.CompanyID, models.RoleWorker).
-		Select("id", "name", "email", "phone_no", "address"). // Only return necessary info
+		Select("id", "name", "email", "phone_no"). // Only return necessary info
 		Find(&workers).Error
 
 	return workers, err

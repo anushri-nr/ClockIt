@@ -15,6 +15,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms'; // Add this
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar'; // Add this
 import { AvailabilityPayload } from '../services/worker.service';
+import { ChangeDetectorRef } from '@angular/core';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -94,7 +95,8 @@ export class WorkerDashboardComponent implements OnInit {
     private workerService: WorkerService,
     private authService: AuthService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) { }
 
   colDefs: ColDef[] = [
@@ -206,10 +208,9 @@ export class WorkerDashboardComponent implements OnInit {
   submitAvailability() {
     if (this.isSubmittingAvailability) return;
     
-    // Wrap in setTimeout to escape the Angular NG0100 Change Detection trap
-    setTimeout(() => {
-      this.isSubmittingAvailability = true;
-    });
+    this.isSubmittingAvailability = true;
+    
+    this.cdr.detectChanges();
 
     // 100% force the day into an integer (HTML dropdowns output strings by default)
     const payload: AvailabilityPayload = {
@@ -222,18 +223,18 @@ export class WorkerDashboardComponent implements OnInit {
       next: () => {
         this.snackBar.open('Availability saved successfully!', 'Close', { duration: 3000 });
         
-        setTimeout(() => {
           this.isSubmittingAvailability = false;
           this.closeAvailabilityModal();
-        });
+
+          this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Failed to update availability', err);
         this.snackBar.open('Failed to save availability.', 'Close', { duration: 3000 });
         
-        setTimeout(() => {
           this.isSubmittingAvailability = false;
-        });
+
+          this.cdr.detectChanges();
       }
     });
   }

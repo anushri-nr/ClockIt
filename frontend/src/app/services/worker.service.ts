@@ -39,6 +39,6 @@ export class WorkerService {
 
   // Tell the Go backend to release the shift
   releaseShift(shiftId: number): Observable<any> {
-    return this.http.post(`http://localhost:8080/api/shifts/release`, { shift_id: shiftId });
+    return this.http.post(`${environment.apiUrl}/shifts/release`, { shift_id: shiftId });
   }
 }

@@ -295,6 +295,12 @@ func GetCompanyWorkers(c *gin.Context) {
 	svc := services.SupervisorService{}
 	workers, err := svc.GetCompanyWorkers(authID)
 	if err != nil {
+		// Check if the records don't exist (404)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "workers not found"})
+			return
+		}
+		// Catch-all for actual server/database crashes (500)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch company workers"})
 		return
 	}
