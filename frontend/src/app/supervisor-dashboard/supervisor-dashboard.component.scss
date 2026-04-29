@@ -1003,3 +1003,18 @@
 ::ng-deep .toast-error .mdc-button__label {
   color: white !important; /* Make the 'Close' button white */
 }
+button, 
+.btn, 
+.btn.small, 
+.btn.ghost, 
+.toggle-btn, 
+.request-actions button {
+  cursor: pointer !important;
+}
+
+.request-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}

@@ -99,6 +99,7 @@ export class SupervisorDashboardComponent implements OnInit {
       this.loadShifts();
       this.loadAssignedSchedule();
       this.loadOvertimeRisk();
+      this.loadPendingApprovals();
     } else {
       console.error('CRITICAL: No valid user state found. Cannot load shifts.');
     }
@@ -252,6 +253,19 @@ export class SupervisorDashboardComponent implements OnInit {
     });
   }
 
+  loadPendingApprovals() {
+    this.supervisorService.getRequestedShifts().subscribe({
+      next: (data) => {
+        this.pendingApprovalShifts = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load pending approval shifts', err);
+        this.pendingApprovalShifts = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
   // --- LOGIC ---
 
   get totalHours(): string {
@@ -331,6 +345,7 @@ export class SupervisorDashboardComponent implements OnInit {
         // Refresh the grid to show the new assignment
         this.loadShifts();
         this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
 
         this.cdr.detectChanges();
       },
@@ -515,6 +530,9 @@ export class SupervisorDashboardComponent implements OnInit {
         console.log('Shift approved & assigned');
         this.openStatusSnapshot(); // Refresh the modal list
         this.loadAssignedSchedule(); // Refresh the main dashboard view
+        this.loadOvertimeRisk();     // Refresh overtime alerts instantly
+
+        if (this.isStatusSnapshotOpen) this.openStatusSnapshot(); // Refresh modal if open
       },
       error: (err) => {
         console.error('Approve failed', err);
@@ -528,7 +546,9 @@ export class SupervisorDashboardComponent implements OnInit {
     this.supervisorService.rejectShiftRequest(shiftId).subscribe({
       next: () => {
         console.log('Shift request rejected');
-        this.openStatusSnapshot(); // Refresh the modal list
+        this.loadPendingApprovals(); // Refresh side panel
+        if (this.isStatusSnapshotOpen) this.openStatusSnapshot(); // Refresh modal if open
+
       },
       error: (err) => {
         console.error('Reject failed', err);
@@ -610,6 +630,7 @@ export class SupervisorDashboardComponent implements OnInit {
         this.openOpenShiftsModal(); 
         // Also refresh the main grid just in case
         this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
         // Refresh the raw shifts list so the Assign Worker modal updates!
         this.loadShifts();
       },
@@ -629,6 +650,7 @@ export class SupervisorDashboardComponent implements OnInit {
         
         // Refresh the schedule grid
         this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
         
         // Refresh the shifts list so the Unassigned modal gets updated
         this.loadShifts(); 
