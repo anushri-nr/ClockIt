@@ -13,6 +13,12 @@ export interface WorkerShift {
   status: string;      // json:"status"
 }
 
+export interface AvailabilityPayload {
+  day_of_week: number; // 0 = Sunday, 1 = Monday, etc.
+  start_time: string;  // e.g., "09:00"
+  end_time: string;    // e.g., "17:00"
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -25,5 +31,14 @@ export class WorkerService {
   // GET /api/workers/:employee_id/shifts
   getMyShifts(workerId: number): Observable<WorkerShift[]> {
     return this.http.get<WorkerShift[]>(`${this.apiUrl}/${workerId}/shifts`);
+  }
+
+  createAvailability(workerId: number, payload: AvailabilityPayload): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${workerId}/availability`, payload);
+  }
+
+  // Tell the Go backend to release the shift
+  releaseShift(shiftId: number): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/shifts/release`, { shift_id: shiftId });
   }
 }

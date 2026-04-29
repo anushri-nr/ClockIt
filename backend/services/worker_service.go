@@ -72,33 +72,48 @@ func (s *WorkerService) GetAssignedShifts(employeeID uint) ([]AssignedShiftRespo
 	return resp, nil
 }
 
-// CreateWorkerAvailability allows a worker to set their availability for a specific day of the week
+// CreateWorkerAvailability allows a worker to set or update their availability for a specific day
 func CreateWorkerAvailability(workerID uint, dayOfWeek int, startTime string, endTime string) (*models.WorkerAvailability, error) {
-	// Validate worker exists and is a worker
+	// 1. Validate worker exists
 	var emp models.Employee
 	if err := database.DB.Where("id = ? AND role = ?", workerID, models.RoleWorker).First(&emp).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("CreateWorkerAvailability: employee not found or not a worker: %v", err)
 			return nil, gorm.ErrRecordNotFound
 		}
-		log.Printf("CreateWorkerAvailability: DB error while validating employee: %v", err)
 		return nil, err
 	}
 
-	availability := &models.WorkerAvailability{
-		WorkerID:  workerID,
-		DayOfWeek: dayOfWeek,
-		StartTime: startTime,
-		EndTime:   endTime,
+	var availability models.WorkerAvailability
+	
+	// 2. Look for existing availability for this specific worker on this specific day
+	result := database.DB.Where("worker_id = ? AND day_of_week = ?", workerID, dayOfWeek).First(&availability)
+
+	if result.Error == nil {
+		// UPDATE: Record exists, just update the times
+		availability.StartTime = startTime
+		availability.EndTime = endTime
+		if err := database.DB.Save(&availability).Error; err != nil {
+			return nil, err
+		}
+		log.Printf("CreateWorkerAvailability: updated existing availability for worker=%d on day=%d", workerID, dayOfWeek)
+	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// CREATE: Record doesn't exist, insert a new one
+		availability = models.WorkerAvailability{
+			WorkerID:  workerID,
+			DayOfWeek: dayOfWeek,
+			StartTime: startTime,
+			EndTime:   endTime,
+		}
+		if err := database.DB.Create(&availability).Error; err != nil {
+			return nil, err
+		}
+		log.Printf("CreateWorkerAvailability: created new availability for worker=%d on day=%d", workerID, dayOfWeek)
+	} else {
+		// Database error
+		return nil, result.Error
 	}
 
-	if err := database.DB.Create(availability).Error; err != nil {
-		log.Printf("CreateWorkerAvailability: failed to create availability in DB: %v", err)
-		return nil, err
-	}
-
-	log.Printf("CreateWorkerAvailability: availability created successfully for worker=%d on day=%d", workerID, dayOfWeek)
-	return availability, nil
+	return &availability, nil
 }
 
 // GetReleasedShiftsByEmployeeCompany returns released shifts from the employee's company.

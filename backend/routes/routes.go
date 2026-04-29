@@ -40,6 +40,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetAssignedShifts,
 		)
+		supervisorRoutes.GET("/company/workers",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.GetCompanyWorkers,
+		)
 	}
 
 	workerRoutes := r.Group("/api/workers")
@@ -90,6 +95,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.RequestShift,
+		)
+		shiftRoutes.DELETE("/:shift_id",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.DeleteShift,
+		)
+		shiftRoutes.PATCH("/:shift_id/unassign",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.UnassignWorker,
 		)
 	}
 

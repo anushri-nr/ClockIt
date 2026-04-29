@@ -107,7 +107,9 @@
             [shifts]="openShifts" 
             [isLoading]="isLoadingOpenShifts"
             loadingMessage="Loading open shifts..."
-            emptyMessage="Great job! There are currently no unassigned shifts.">
+            emptyMessage="Great job! There are currently no unassigned shifts."
+            [showDelete]="true"
+            (onDelete)="deleteShift($event)">
           </app-shift-list>
         </div>
       </div>
@@ -134,9 +136,8 @@
         </div>
 
         <div class="panel">
-          <h3>Shifts created</h3>
-          <ul class="list compact">
-            <li *ngFor="let shift of shifts">
+          <h3>Open Shifts</h3> <ul class="list compact">
+            <li *ngFor="let shift of openShifts">
               <div>
                 <div class="request-title">
                   {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
@@ -149,10 +150,10 @@
         <div class="panel">
           <h3>Assignment</h3>
           <label class="field">
-            <span>Select shift</span>
-            <select class="input" [(ngModel)]="selectedShiftId" (change)="onShiftSelected()">
+            <span>Select open shift</span>
+            <select class="input" [(ngModel)]="selectedShiftId" (ngModelChange)="onShiftSelected()">
               <option value="">Choose a shift</option>
-              <option *ngFor="let shift of shifts" [value]="shift.id">
+              <option *ngFor="let shift of openShifts" [value]="shift.id || shift.shift_id">
                 {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
               </option>
             </select>
@@ -214,6 +215,44 @@
     </div>
   </section>
 
+  <section *ngIf="isWorkerDirectoryOpen" class="shift-modal open" aria-label="Worker Directory">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="eyebrow dark">Human Resources</div>
+          <h2>Worker Directory</h2>
+          <p>Contact information for all employees in your company.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost dark" type="button" (click)="closeWorkerDirectory()">Close</button>
+        </div>
+      </div>
+
+      <div class="modal-grid" style="grid-template-columns: 1fr;">
+        <div class="panel">
+          <div *ngIf="isLoadingWorkersList" style="padding: 20px; text-align: center;">Loading directory...</div>
+          
+          <table *ngIf="!isLoadingWorkersList" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="text-align: left; border-bottom: 2px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
+                <th style="padding: 12px;">Name</th>
+                <th style="padding: 12px;">Email</th>
+                <th style="padding: 12px;">Phone</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let worker of companyWorkers" style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px; font-weight: 600;">{{ worker.name }}</td>
+                <td style="padding: 12px; color: #3b82f6;">{{ worker.email }}</td>
+                <td style="padding: 12px; color: #475569;">{{ worker.phone_no || 'N/A' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <div class="dashboard-content">
     <mat-toolbar class="custom-toolbar">
       <a class="brand" routerLink="/" style="text-decoration: none; color: inherit; cursor: pointer;">
@@ -248,6 +287,10 @@
     <section class="summary-grid">
       <article class="summary-card">
         <div class="summary-title">Today’s Coverage</div>
+        <div style="font-size: 2rem; font-weight: bold; color: #0f172a; margin-top: 8px;">
+          {{ todaysCoverageCount }}
+        </div>
+        <p style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">Workers on schedule</p>
       </article>
       <article class="summary-card clickable" role="button" tabindex="0" (click)="openOpenShiftsModal()">
         <div class="summary-title">Open Shifts</div>
@@ -264,6 +307,13 @@
       </article>
       <article class="summary-card clickable" role="button" tabindex="0" (click)="openStatusSnapshot()">
         <div class="summary-title">Pending approvals</div>
+      </article>
+      <article class="summary-card clickable" role="button" tabindex="0" (click)="openWorkerDirectory()">
+        <div class="summary-title">Worker Directory</div>
+        <div style="margin-top: 8px; color: #64748b;">
+          <mat-icon>contacts</mat-icon>
+        </div>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">View team contact info</p>
       </article>
     </section>
 
@@ -309,16 +359,23 @@
 
           <ul class="list compact" *ngIf="!isLoadingSchedule && filteredAssignedShifts.length > 0">
             <li *ngFor="let shift of filteredAssignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <div>
-                <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
-                  {{ shift.start_time | date:'MMM d, y' }}
+             <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
+                    {{ shift.start_time | date:'MMM d, y' }}
+                  </div>
+                  <div class="request-sub" style="color: #475569; margin-top: 4px;">
+                    {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+                  </div>
+                  <div class="chip active" style="margin-top: 8px; display: inline-block;">
+                    Assigned to Worker: {{ shift.assigned_to || 'Unassigned' }}
+                  </div>
                 </div>
-                <div class="request-sub" style="color: #475569; margin-top: 4px;">
-                  {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
-                </div>
-                <div class="chip active" style="margin-top: 8px; display: inline-block;">
-                  Assigned to Worker: {{ shift.assigned_to || 'Unassigned' }}
-                </div>
+                
+                <button class="btn ghost dark" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #f59e0b; color: #d97706;" 
+                        (click)="unassignShift(shift.shift_id || shift.id)">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle;">person_remove</mat-icon> Remove
+                </button>
               </div>
             </li>
           </ul>

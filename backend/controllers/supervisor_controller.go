@@ -285,3 +285,25 @@ func GetWorkersWithOvertimeHours(c *gin.Context) {
 	c.JSON(http.StatusOK, workers)
 }
 
+func GetCompanyWorkers(c *gin.Context) {
+	authID, err := services.GetAuthenticatedEmployeeID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized request"})
+		return
+	}
+
+	svc := services.SupervisorService{}
+	workers, err := svc.GetCompanyWorkers(authID)
+	if err != nil {
+		// Check if the records don't exist (404)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "workers not found"})
+			return
+		}
+		// Catch-all for actual server/database crashes (500)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch company workers"})
+		return
+	}
+
+	c.JSON(http.StatusOK, workers)
+}

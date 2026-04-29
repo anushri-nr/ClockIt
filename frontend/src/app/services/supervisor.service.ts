@@ -23,6 +23,13 @@ export interface Worker {
   company_name: string;
 }
 
+export interface DirectoryWorker {
+  id: number;
+  name: string;
+  email: string;
+  phone_no: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -87,5 +94,19 @@ export class SupervisorService {
   // Fetch workers at risk of overtime
   getOvertimeRiskWorkers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
+  }
+
+  // Delete a shift
+  deleteShift(shiftId: number): Observable<any> {
+    return this.http.delete(`${environment.apiUrl}/shifts/${shiftId}`);
+  }
+
+  // Unassign a worker from a shift
+  unassignWorker(shiftId: number): Observable<any> {
+    return this.http.patch(`${environment.apiUrl}/shifts/${shiftId}/unassign`, {});
+  }
+
+  getCompanyWorkers(): Observable<DirectoryWorker[]> {
+    return this.http.get<DirectoryWorker[]>(`${this.apiUrl}/company/workers`);
   }
 }
