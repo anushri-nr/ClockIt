@@ -8,11 +8,13 @@ import { ShiftService } from '../services/shift.service';
 import { SupervisorService } from '../services/supervisor.service';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { ShiftListComponent } from '../components/shift-list/shift-list.component';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule, MatSnackBarModule, ShiftListComponent],
   templateUrl: './supervisor-dashboard.component.html',
   styleUrl: './supervisor-dashboard.component.scss'
 })
@@ -64,12 +66,15 @@ export class SupervisorDashboardComponent implements OnInit {
   isLoadingOpenShifts = false;
   isLoadingPendingShifts = false;
 
+  searchTerm: string = '';
+
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnInit() {
@@ -263,7 +268,7 @@ export class SupervisorDashboardComponent implements OnInit {
     this.createShift.createdBy = this.currentSupervisorId.toString();
 
     if (!this.createShift.startTime || !this.createShift.endTime) {
-      alert('Please fill start time and end times.');
+      this.showToast('Please fill start time and end times.', true);
       return;
     }
 
@@ -305,7 +310,7 @@ export class SupervisorDashboardComponent implements OnInit {
     this.assignShiftError = '';
 
     if (!this.selectedShiftId || !this.selectedWorkerId) {
-      alert('Please select a shift and a worker.');
+      this.showToast('Please select a shift and a worker.');
       return;
     }
 
@@ -458,7 +463,7 @@ export class SupervisorDashboardComponent implements OnInit {
   // ISSUE #73 & #77: Approve Action
   approveRequest(shiftId: number, workerId: number) {
     if (!workerId) {
-      alert("Worker ID missing from request.");
+      this.showToast("Worker ID missing from request.");
       return;
     }
     
@@ -470,7 +475,7 @@ export class SupervisorDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error('Approve failed', err);
-        alert('Failed to approve shift.');
+        this.showToast('Failed to approve shift.');
       }
     });
   }
@@ -484,7 +489,7 @@ export class SupervisorDashboardComponent implements OnInit {
       },
       error: (err) => {
         console.error('Reject failed', err);
-        alert('Failed to reject shift.');
+        this.showToast('Failed to reject shift.');
       }
     });
   }
@@ -492,6 +497,55 @@ export class SupervisorDashboardComponent implements OnInit {
 
   setScheduleView(view: 'today' | 'week') {
     this.scheduleView = view;
+  }
+
+  get filteredAssignedShifts() {
+    if (!this.searchTerm) {
+      return this.assignedShifts;
+    }
+    const lowerTerm = this.searchTerm.toLowerCase();
+    
+    return (this.assignedShifts || []).filter(shift => {
+      // Check if the worker's name includes the search term
+      const workerName = (shift.assigned_to || 'Unassigned').toLowerCase();
+      return workerName.includes(lowerTerm);
+    });
+  }
+
+  get weekSchedule() {
+    const days = [];
+    const today = new Date();
+    
+    // Generate an array for Today + the next 6 days
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date();
+      currentDate.setDate(today.getDate() + i);
+      
+      // Find all shifts that match this specific date
+      const dayShifts = (this.assignedShifts || []).filter(shift => {
+        if (!shift.start_time) return false;
+        const shiftDate = new Date(shift.start_time);
+        return shiftDate.toDateString() === currentDate.toDateString();
+      });
+
+      // Sort shifts by start time so morning shifts appear at the top
+      dayShifts.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+      days.push({
+        date: currentDate,
+        shifts: dayShifts
+      });
+    }
+    return days;
+  }
+
+  showToast(message: string, isError: boolean = false) {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000, // Disappears after 3 seconds
+      horizontalPosition: 'right',
+      verticalPosition: 'bottom',
+      panelClass: isError ? ['toast-error'] : ['toast-success']
+    });
   }
 
   private updateDateTime() {
