@@ -23,6 +23,13 @@ export interface Worker {
   company_name: string;
 }
 
+export interface DirectoryWorker {
+  id: number;
+  name: string;
+  email: string;
+  phone_no: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -99,8 +106,7 @@ export class SupervisorService {
     return this.http.patch(`${environment.apiUrl}/shifts/${shiftId}/unassign`, {});
   }
 
-  getCompanyWorkers(): Observable<Worker[]> {
-    // Using the authenticated route
-    return this.http.get<Worker[]>(`${this.apiUrl}/company/workers`);
+  getCompanyWorkers(): Observable<DirectoryWorker[]> {
+    return this.http.get<DirectoryWorker[]>(`${this.apiUrl}/company/workers`);
   }
 }
