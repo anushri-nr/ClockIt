@@ -152,6 +152,23 @@ func TestSupervisorLogin_UserNotFound(t *testing.T) {
 	}
 }
 
+func TestSupervisorLogin_BadRequest_InvalidPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/supervisors/login", bytes.NewReader([]byte(`{"email":"bad-email"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := gin.New()
+	r.POST("/api/supervisors/login", SupervisorLogin)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d, body=%s", w.Code, w.Body.String())
+	}
+}
+
 func TestSupervisorRegister_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	_ = setupTestDB(t)
@@ -182,6 +199,32 @@ func TestSupervisorRegister_Success(t *testing.T) {
 
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 Created, got %d, body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestSupervisorRegister_InvalidCompany(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	body := map[string]interface{}{
+		"name":       "BadCompanySup",
+		"email":      "badcompanysup@example.com",
+		"password":   "strongpass",
+		"company_id": 999999,
+		"wage":       15.0,
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/supervisors/register", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := gin.New()
+	r.POST("/api/supervisors/register", SupervisorRegister)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d, body=%s", w.Code, w.Body.String())
 	}
 }
 
@@ -265,6 +308,22 @@ func TestGetWorkerAvailability_InvalidDate(t *testing.T) {
 	}
 }
 
+func TestGetWorkerAvailability_MissingQuery(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/workers/availability?date=2022-03-23", nil)
+	w := httptest.NewRecorder()
+
+	r := gin.New()
+	r.GET("/api/supervisors/workers/availability", GetWorkerAvailability)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request for missing company_id, got %d, body=%s", w.Code, w.Body.String())
+	}
+}
+
 func TestGetShiftsByCompany_Controller_ValidationAndSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	_ = setupTestDB(t)
@@ -321,6 +380,21 @@ func TestGetShiftsByCompany_Controller_ValidationAndSuccess(t *testing.T) {
 	r.ServeHTTP(w3, req3)
 	if w3.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request for invalid employee id, got %d, body=%s", w3.Code, w3.Body.String())
+	}
+}
+
+func TestGetShiftsByCompany_Controller_SupervisorNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/999999/shifts", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/:employee_id/shifts", GetShiftsByCompany)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 Not Found, got %d, body=%s", w.Code, w.Body.String())
 	}
 }
 
@@ -382,6 +456,35 @@ func TestGetRequestedShifts_Controller_Success(t *testing.T) {
 	if fmt.Sprint(resp[0]["status"]) != string(models.StatusRequested) {
 		t.Fatalf("expected status %s, got %v", string(models.StatusRequested), resp[0]["status"])
 	}
+}
+
+func TestGetRequestedShifts_Unauthorized(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/requested", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/requested", GetRequestedShifts)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetRequestedShifts_SupervisorNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/supervisors/shifts/requested", nil)
+	w := httptest.NewRecorder()
+	r := gin.New()
+	r.GET("/api/supervisors/shifts/requested", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, uint(999999))
+		GetRequestedShifts(c)
+	})
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestGetAssignedShifts_Unauthorized(t *testing.T) {
