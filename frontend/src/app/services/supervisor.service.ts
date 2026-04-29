@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Shift {
   id: number;
@@ -27,7 +28,7 @@ export interface Worker {
 })
 export class SupervisorService {
 
-  private apiUrl = 'http://localhost:8080/api/supervisors';
+  private apiUrl = environment.apiUrl + '/supervisors';
 
   constructor(private http: HttpClient) { }
 
@@ -65,7 +66,7 @@ export class SupervisorService {
     };
     // Note: The route is actually under 'shifts', not 'supervisors'
     // So we use a different base URL for this specific call
-    return this.http.post('http://localhost:8080/api/shifts/assign', payload);
+    return this.http.post(`${environment.apiUrl}/shifts/assign`, payload);
   }
 
   /// Fetch all assigned shifts for the schedule view
