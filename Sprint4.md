@@ -1,7 +1,7 @@
 # Sprint 4 - ClockIt
 
 ## Overview
-Sprint 4 focused on improving test coverage, documenting the current backend APIs, and hardening the shift workflow behavior added in earlier sprints. 
+Sprint 4 focused on improving test coverage, documenting the current backend APIs, hardening the shift workflow behavior added in earlier sprints, and deploying the full stack to AWS.
 ---
 
 ## Work Completed in Sprint 4
@@ -23,6 +23,18 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
 
 ### Frontend
 
+---
+
+## AWS Deployment
+
+### Backend
+- Deployed Go backend to AWS Elastic Beanstalk.
+- Backend live at: `http://clockit.us-east-1.elasticbeanstalk.com`
+
+### Frontend
+- Configured Angular production build to use `environment.prod.ts` for environment-specific API URLs.
+- Deployed Angular app to AWS S3 static website hosting.
+- Frontend live at: `http://clockit-app.s3-website-us-east-1.amazonaws.com`
 
 ---
 
