@@ -201,6 +201,37 @@ func TestAssignWorkerToShift_Success(t *testing.T) {
 	require.Equal(t, models.StatusAssigned, asg.Status)
 }
 
+func TestAssignWorkerToShift_UpdatesExistingRequest(t *testing.T) {
+	setupServiceTestDB(t)
+
+	co := createTestCompany(t, "AssignUpdateCo")
+	supervisor := createTestEmployee(t, "SupUpdate", "sup-update@test.local", models.RoleSupervisor, co.ID)
+	worker := createTestEmployee(t, "WorkerUpdate", "worker-update@test.local", models.RoleWorker, co.ID)
+
+	start := time.Now().Add(48 * time.Hour).Truncate(time.Second)
+	end := start.Add(8 * time.Hour)
+	shift := createTestShift(t, supervisor.ID, start, end)
+
+	existing := models.ShiftAssignment{
+		ShiftID:    shift.ID,
+		EmployeeID: worker.ID,
+		AssigneeID: supervisor.ID,
+		AssignedAt: time.Now().Add(-1 * time.Hour),
+		Status:     models.StatusRequested,
+	}
+	require.NoError(t, database.DB.Create(&existing).Error)
+
+	asg, err := AssignWorkerToShift(shift.ID, worker.ID, supervisor.ID)
+	require.NoError(t, err)
+	require.NotNil(t, asg)
+	require.Equal(t, existing.ID, asg.ID)
+	require.Equal(t, models.StatusAssigned, asg.Status)
+
+	var count int64
+	require.NoError(t, database.DB.Model(&models.ShiftAssignment{}).Where("shift_id = ? AND employee_id = ?", shift.ID, worker.ID).Count(&count).Error)
+	require.Equal(t, int64(1), count)
+}
+
 func TestAssignWorkerToShift_ShiftNotFound(t *testing.T) {
 	setupServiceTestDB(t)
 
@@ -369,6 +400,53 @@ func TestRejectShiftRequest_NotFound_WrongCompany(t *testing.T) {
 
 	svc := SupervisorService{}
 	out, err := svc.RejectShiftRequest(supA.ID, shiftB.ID)
+	require.Error(t, err)
+	require.Nil(t, out)
+	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+}
+
+func TestRejectShiftRequest_NotFound_WhenSupervisorMissing(t *testing.T) {
+	setupServiceTestDB(t)
+
+	svc := SupervisorService{}
+	out, err := svc.RejectShiftRequest(999999, 1)
+	require.Error(t, err)
+	require.Nil(t, out)
+	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+}
+
+func TestRequestReleasedShift_WorkerWrongCompany(t *testing.T) {
+	setupServiceTestDB(t)
+
+	companyA := models.Company{Name: "Request A"}
+	companyB := models.Company{Name: "Request B"}
+	require.NoError(t, database.DB.Create(&companyA).Error)
+	require.NoError(t, database.DB.Create(&companyB).Error)
+
+	workerA := models.Employee{Name: "WorkerA", Email: "worker-a-request@test.local", Role: models.RoleWorker, CompanyID: companyA.ID, Wage: 20}
+	supB := models.Employee{Name: "SupB", Email: "sup-b-request@test.local", Role: models.RoleSupervisor, CompanyID: companyB.ID, Wage: 40}
+	workerB := models.Employee{Name: "WorkerB", Email: "worker-b-request@test.local", Role: models.RoleWorker, CompanyID: companyB.ID, Wage: 20}
+	require.NoError(t, database.DB.Create(&workerA).Error)
+	require.NoError(t, database.DB.Create(&supB).Error)
+	require.NoError(t, database.DB.Create(&workerB).Error)
+
+	now := time.Now().UTC()
+	shiftB := models.Shift{StartTime: now.Add(24 * time.Hour), EndTime: now.Add(32 * time.Hour), CreatedBy: supB.ID}
+	require.NoError(t, database.DB.Create(&shiftB).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: shiftB.ID, EmployeeID: workerB.ID, AssigneeID: supB.ID, Status: models.StatusReleased, AssignedAt: now,
+	}).Error)
+
+	out, err := RequestReleasedShift(workerA.ID, shiftB.ID)
+	require.Error(t, err)
+	require.Nil(t, out)
+	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+}
+
+func TestRequestReleasedShift_WorkerNotFound(t *testing.T) {
+	setupServiceTestDB(t)
+
+	out, err := RequestReleasedShift(999999, 1)
 	require.Error(t, err)
 	require.Nil(t, out)
 	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))

@@ -11,7 +11,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, of, tap, map } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -28,6 +28,7 @@ interface Shift {
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     AgGridAngular,
     MatToolbarModule,
     MatButtonModule,
@@ -40,7 +41,6 @@ interface Shift {
 })
 export class WorkerDashboardComponent implements OnInit {
 
-  // Dynamic User Data (Replaced Hardcoded Values)
   currentWorkerId: number = 0;
   currentCompanyId: number = 0;
   currentWorkerName: string = '';
@@ -54,6 +54,9 @@ export class WorkerDashboardComponent implements OnInit {
 
   totalHours = 0;
   estEarnings = 0;
+  weeklyEarnings = 0;
+  monthlyEarnings = 0;
+  upcomingHours = 0;
   hourlyWage = 15;
   weeklyTarget = 40;
   dailyTarget = 8;
@@ -71,28 +74,24 @@ export class WorkerDashboardComponent implements OnInit {
   ) { }
 
   colDefs: ColDef[] = [
-    // 1. Extract the Date from the start_time ISO string
     {
       headerName: 'Date',
       valueGetter: params => params.data.start_time,
       valueFormatter: params => new Date(params.value).toLocaleDateString(),
       flex: 1
     },
-    // 2. Map to snake_case 'start_time'
     {
       field: 'start_time',
       headerName: 'Start',
       valueFormatter: params => new Date(params.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       flex: 1
     },
-    // 3. Map to snake_case 'end_time'
     {
       field: 'end_time',
       headerName: 'End',
       valueFormatter: params => new Date(params.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       flex: 1
     },
-    // 4. Duration of the shift
     {
       headerName: 'Duration',
       valueGetter: (params) => {
@@ -103,7 +102,6 @@ export class WorkerDashboardComponent implements OnInit {
       },
       flex: 1
     },
-    // 5. Update status check for lowercase 'assigned'
     {
       field: 'status',
       flex: 1,
@@ -112,7 +110,6 @@ export class WorkerDashboardComponent implements OnInit {
         return value.charAt(0).toUpperCase() + value.slice(1);
       },
       cellStyle: (params) => {
-        // Go backend returns lowercase "assigned"
         const status = params.value?.toLowerCase();
         const isAssigned = status === 'assigned';
         const isReleased = status === 'released';
@@ -122,8 +119,6 @@ export class WorkerDashboardComponent implements OnInit {
         };
       }
     },
-    // 6. Wage is not currently in the Shift API response, 
-    // so we can use your hardcoded dashboard value for now.
     {
       headerName: 'Wage ($/hr)',
       valueGetter: () => this.hourlyWage,
@@ -134,10 +129,8 @@ export class WorkerDashboardComponent implements OnInit {
   ngOnInit() {
     this.updateDateTime();
 
-    // 1. Ask the single source of truth for the user
     const user = this.authService.currentUserValue;
 
-    // 2. Safely assign variables and fetch data
     if (user && user.id) {
       this.currentWorkerId = user.id;
       this.currentWorkerName = user.name || 'Worker';
@@ -145,7 +138,6 @@ export class WorkerDashboardComponent implements OnInit {
 
       console.log(`Worker Dashboard initialized for User ID: ${this.currentWorkerId}`);
 
-      // 3. Load shifts using the REAL dynamic ID
       this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
         map((data) => {
           const safeData = data || [];
@@ -176,17 +168,41 @@ export class WorkerDashboardComponent implements OnInit {
 
   calculateStats(shifts: WorkerShift[]) {
     this.totalHours = 0;
+    this.upcomingHours = 0;
+    this.weeklyEarnings = 0;
+    this.monthlyEarnings = 0;
+
+    const now = new Date();
+    const startOfWeek = this.getStartOfWeek(now);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
     shifts.forEach(shift => {
-      // Safety check for missing times
       if (!shift.start_time || !shift.end_time) return;
+
+      const status = shift.status?.toLowerCase();
+      if (status === 'released') return;
 
       const start = new Date(shift.start_time).getTime();
       const end = new Date(shift.end_time).getTime();
       const durationHours = (end - start) / (1000 * 60 * 60);
+      if (durationHours <= 0) return;
 
-      if (durationHours > 0) {
-        this.totalHours += durationHours;
+      this.totalHours += durationHours;
+
+      if (status === 'assigned') {
+        this.upcomingHours += durationHours;
+      }
+
+      const shiftStart = new Date(shift.start_time);
+      if (shiftStart >= startOfWeek && shiftStart <= endOfWeek) {
+        this.weeklyEarnings += durationHours * this.hourlyWage;
+      }
+      if (shiftStart >= startOfMonth && shiftStart <= endOfMonth) {
+        this.monthlyEarnings += durationHours * this.hourlyWage;
       }
     });
 
@@ -196,12 +212,10 @@ export class WorkerDashboardComponent implements OnInit {
   findNextShift(shifts: WorkerShift[]) {
     const now = new Date().getTime();
 
-    // safety check
     if (!shifts) return;
 
     const assignedShifts = this.getAssignedShifts(shifts);
 
-    // Filter for future assigned shifts and sort by start time
     const futureShifts = assignedShifts
       .filter(s => new Date(s.start_time).getTime() > now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());

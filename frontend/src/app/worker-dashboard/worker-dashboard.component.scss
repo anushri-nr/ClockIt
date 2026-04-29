@@ -429,6 +429,123 @@
     font-size: 0.95rem;
   }
 
+  .earnings-card {
+    padding: 28px;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, #0f5f5c 0%, #144e4b 60%, #1a3a38 100%) !important;
+    border: none;
+    box-shadow: 0 14px 30px rgba(15, 95, 92, 0.28) !important;
+    color: white;
+  }
+
+  .earnings-header {
+    margin-bottom: 24px;
+  }
+
+  .earnings-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
+  }
+
+  .earnings-total {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .earnings-sub {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .earnings-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .earnings-period-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .earnings-period-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 6px;
+  }
+
+  .earnings-period-amount {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .earnings-split {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 16px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .earnings-split-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .split-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
+  }
+
+  .split-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .completed-dot {
+    background: #4ade80;
+  }
+
+  .upcoming-dot {
+    background: #f4b34d;
+  }
+
+  .split-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  @media (max-width: 600px) {
+    .earnings-breakdown {
+      grid-template-columns: 1fr;
+    }
+
+    .earnings-total {
+      font-size: 2.4rem;
+    }
+  }
+
   @media (max-width: 720px) {
     .weekly-header {
       flex-direction: column;

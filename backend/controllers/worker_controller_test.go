@@ -3,10 +3,10 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
 	"time"
 
 	"clockit/backend/database"
@@ -282,6 +282,179 @@ func TestWorkerLogin_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	require.NotEmpty(t, resp["token"])
 	require.NotNil(t, resp["employee"])
+}
+
+func TestWorkerLogin_InvalidPassword(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	require.NoError(t, services.InitAuth("test-secret"))
+
+	company := models.Company{Name: "Worker Bad Login Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	_, err := services.RegisterEmployee(
+		"Bad Login Worker",
+		"bad.login.worker@test.local",
+		"password123",
+		"123 Main St",
+		"9999999999",
+		company.ID,
+		20.0,
+		models.RoleWorker,
+	)
+	require.NoError(t, err)
+
+	r := gin.New()
+	r.POST("/api/workers/login", WorkerLogin)
+
+	body := map[string]string{
+		"email":    "bad.login.worker@test.local",
+		"password": "wrongpassword",
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/login", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestWorkerLogin_UserNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	require.NoError(t, services.InitAuth("test-secret"))
+
+	r := gin.New()
+	r.POST("/api/workers/login", WorkerLogin)
+
+	body := map[string]string{
+		"email":    "missing.worker@test.local",
+		"password": "password123",
+	}
+	jb, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/login", bytes.NewReader(jb))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetShiftsForWorker_Success_WithWindowFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "Worker Window Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	supervisor := models.Employee{
+		Name: "Window Sup", Email: "window.sup@test.local", Role: models.RoleSupervisor, CompanyID: company.ID, Wage: 40,
+	}
+	worker := models.Employee{
+		Name: "Window Worker", Email: "window.worker@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 20,
+	}
+	require.NoError(t, database.DB.Create(&supervisor).Error)
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	base := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	laterShift := models.Shift{StartTime: base.Add(12 * time.Hour), EndTime: base.Add(20 * time.Hour), CreatedBy: supervisor.ID}
+	earlierShift := models.Shift{StartTime: base, EndTime: base.Add(8 * time.Hour), CreatedBy: supervisor.ID}
+	require.NoError(t, database.DB.Create(&laterShift).Error)
+	require.NoError(t, database.DB.Create(&earlierShift).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: laterShift.ID, EmployeeID: worker.ID, AssigneeID: supervisor.ID, Status: models.StatusAssigned, AssignedAt: time.Now().UTC(),
+	}).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: earlierShift.ID, EmployeeID: worker.ID, AssigneeID: supervisor.ID, Status: models.StatusAssigned, AssignedAt: time.Now().UTC(),
+	}).Error)
+
+	r := gin.New()
+	r.GET("/api/workers/:employee_id/shifts", GetShiftsForWorker)
+
+	url := "/api/workers/" + fmt.Sprint(worker.ID) + "/shifts?start_time=" + base.Add(-1*time.Hour).Format(time.RFC3339) + "&end_time=" + base.Add(9*time.Hour).Format(time.RFC3339)
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var out []map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
+	require.Len(t, out, 1)
+	require.Equal(t, float64(earlierShift.ID), out[0]["shift_id"])
+}
+
+func TestGetShiftsForWorker_BadRequest_IncompleteWindow(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/1/shifts?start_time=2026-02-15T09:00:00Z", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestGetShiftsForWorker_BadRequest_InvalidWindowOrder(t *testing.T) {
+	r := setupWorkerControllerRouter()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/1/shifts?start_time=2026-02-15T17:00:00Z&end_time=2026-02-15T09:00:00Z", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateAvailability_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	company := models.Company{Name: "Availability Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+	worker := models.Employee{Name: "Available Worker", Email: "available.worker@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 20}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	r := gin.New()
+	r.POST("/api/workers/:employee_id/availability", CreateAvailability)
+
+	body := `{"day_of_week":1,"start_time":"09:00:00","end_time":"17:00:00"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/workers/"+fmt.Sprint(worker.ID)+"/availability", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	var out map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
+	require.Equal(t, float64(worker.ID), out["worker_id"])
+	require.Equal(t, "09:00:00", out["start_time"])
+}
+
+func TestGetReleasedShiftsForWorkerCompany_WorkerNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupTestDB(t)
+
+	router := gin.New()
+	router.GET("/api/workers/shifts/released", func(c *gin.Context) {
+		c.Set(services.ContextEmployeeID, uint(999999))
+		GetReleasedShiftsForWorkerCompany(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/workers/shifts/released", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestGetReleasedShiftsForWorkerCompany_Unauthorized(t *testing.T) {

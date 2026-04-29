@@ -86,6 +86,67 @@ func TestSupervisorService_GetShiftsByCompany_Success(t *testing.T) {
 	require.Equal(t, string(models.StatusAssigned), resp[0].Status)
 }
 
+func TestSupervisorService_GetShiftsByCompany_UnassignedFilter(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "UnassignedSvcCo"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	sup := models.Employee{Name: "Sup", Email: "sup-unassigned@example.com", Password: "x", Role: models.RoleSupervisor, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+
+	start := time.Now().Add(48 * time.Hour)
+	assignedShift := models.Shift{StartTime: start, EndTime: start.Add(8 * time.Hour), CreatedBy: sup.ID, CreatedAt: time.Now()}
+	unassignedShift := models.Shift{StartTime: start.Add(24 * time.Hour), EndTime: start.Add(32 * time.Hour), CreatedBy: sup.ID, CreatedAt: time.Now()}
+	require.NoError(t, database.DB.Create(&assignedShift).Error)
+	require.NoError(t, database.DB.Create(&unassignedShift).Error)
+
+	worker := models.Employee{Name: "Worker", Email: "worker-unassigned@example.com", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&worker).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: assignedShift.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned,
+	}).Error)
+
+	svc := SupervisorService{}
+	resp, err := svc.GetShiftsByCompany(sup.ID, string(models.StatusUnassigned))
+	require.NoError(t, err)
+	require.Len(t, resp, 1)
+	require.Equal(t, unassignedShift.ID, resp[0].ShiftID)
+	require.Equal(t, string(models.StatusUnassigned), resp[0].Status)
+}
+
+func TestSupervisorService_GetShiftsByCompany_NoFilterUsesLatestAssignment(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "LatestSvcCo"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	sup := models.Employee{Name: "Sup", Email: "sup-latest@example.com", Password: "x", Role: models.RoleSupervisor, CompanyID: comp.ID}
+	oldWorker := models.Employee{Name: "Old Worker", Email: "old-worker-latest@example.com", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	worker := models.Employee{Name: "Worker", Email: "worker-latest@example.com", Password: "x", Role: models.RoleWorker, CompanyID: comp.ID}
+	require.NoError(t, database.DB.Create(&sup).Error)
+	require.NoError(t, database.DB.Create(&oldWorker).Error)
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().Add(72 * time.Hour)
+	shift := models.Shift{StartTime: start, EndTime: start.Add(8 * time.Hour), CreatedBy: sup.ID, CreatedAt: time.Now()}
+	require.NoError(t, database.DB.Create(&shift).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: shift.ID, EmployeeID: oldWorker.ID, AssigneeID: sup.ID, AssignedAt: time.Now().Add(-1 * time.Hour), Status: models.StatusReleased,
+	}).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: shift.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned,
+	}).Error)
+
+	svc := SupervisorService{}
+	resp, err := svc.GetShiftsByCompany(sup.ID, "")
+	require.NoError(t, err)
+	require.Len(t, resp, 1)
+	require.Equal(t, string(models.StatusAssigned), resp[0].Status)
+	require.Equal(t, worker.Name, resp[0].AssignedTo)
+	require.Equal(t, worker.ID, resp[0].AssignedToID)
+}
+
 func TestWorkerService_GetWorkersAvailable_Success(t *testing.T) {
 	setupServiceTestDB(t)
 
@@ -197,4 +258,33 @@ func TestSupervisorService_GetWorkersWithOvertimeHours_NotFound(t *testing.T) {
 	_, err := svc.GetWorkersWithOvertimeHours(99999, weekStart)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+}
+
+func TestSupervisorService_GetWorkersWithOvertimeHours_ExcludesWorkersAtOrBelowThreshold(t *testing.T) {
+	setupServiceTestDB(t)
+
+	comp := models.Company{Name: "NoOTCo"}
+	require.NoError(t, database.DB.Create(&comp).Error)
+
+	sup, err := RegisterEmployee("SupNoOT", "supnoot@example.com", "supass", "addr", "222", comp.ID, 20.0, models.RoleSupervisor)
+	require.NoError(t, err)
+
+	worker, err := RegisterEmployee("WNoOT", "wnoot@example.com", "pass1234", "addr", "333", comp.ID, 9.0, models.RoleWorker)
+	require.NoError(t, err)
+
+	now := time.Now()
+	weekday := int(now.Weekday())
+	weekStart := time.Date(now.Year(), now.Month(), now.Day()-weekday, 0, 0, 0, 0, now.Location())
+
+	start := weekStart.Add(24 * time.Hour)
+	sft := models.Shift{StartTime: start, EndTime: start.Add(8 * time.Hour), CreatedBy: sup.ID, CreatedAt: time.Now()}
+	require.NoError(t, database.DB.Create(&sft).Error)
+	require.NoError(t, database.DB.Create(&models.ShiftAssignment{
+		ShiftID: sft.ID, EmployeeID: worker.ID, AssigneeID: sup.ID, AssignedAt: time.Now(), Status: models.StatusAssigned,
+	}).Error)
+
+	svc := SupervisorService{}
+	resp, err := svc.GetWorkersWithOvertimeHours(sup.ID, weekStart)
+	require.NoError(t, err)
+	require.Len(t, resp, 0)
 }

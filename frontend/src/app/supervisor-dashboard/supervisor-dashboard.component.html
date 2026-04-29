@@ -103,25 +103,12 @@
       <div class="modal-grid" style="grid-template-columns: 1fr;">
         <div class="panel">
           <h3>Unassigned Shifts</h3>
-          
-          <div *ngIf="isLoadingOpenShifts" style="padding: 10px; color: #5a6472;">
-            Loading open shifts...
-          </div>
-          
-          <div *ngIf="!isLoadingOpenShifts && openShifts.length === 0" style="padding: 10px; color: #5a6472;">
-            Great job! There are currently no unassigned shifts.
-          </div>
-
-          <ul class="list compact" *ngIf="!isLoadingOpenShifts && openShifts.length > 0">
-            <li *ngFor="let shift of openShifts">
-              <div>
-                <div class="request-title">
-                  {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
-                </div>
-                <div class="request-sub">Status: {{ shift.status }}</div>
-              </div>
-            </li>
-          </ul>
+          <app-shift-list 
+            [shifts]="openShifts" 
+            [isLoading]="isLoadingOpenShifts"
+            loadingMessage="Loading open shifts..."
+            emptyMessage="Great job! There are currently no unassigned shifts.">
+          </app-shift-list>
         </div>
       </div>
     </div>
@@ -212,40 +199,16 @@
       <div class="modal-grid" style="grid-template-columns: 1fr;">
         <div class="panel">
           <h3>Requested Shifts</h3>
-          
-          <div *ngIf="isLoadingPendingShifts" style="padding: 10px; color: #5a6472;">
-            Loading requests...
-          </div>
-          
-          <div *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length === 0" style="padding: 10px; color: #5a6472;">
-            No pending approvals at this time.
-          </div>
-
-          <ul class="list compact" *ngIf="!isLoadingPendingShifts && pendingApprovalShifts.length > 0">
-            <li *ngFor="let shift of pendingApprovalShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div>
-                  <div class="request-title" style="font-weight: 600;">
-                    Worker: {{ shift.assigned_to || 'Unknown' }} requested a shift
-                  </div>
-                  <div class="request-sub" style="color: #475569; margin-top: 4px;">
-                    {{ shift.start_time | date:'MMM d, y, h:mm a' }} → {{ shift.end_time | date:'h:mm a' }}
-                  </div>
-                </div>
-                
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn ghost dark" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #cbd5e1;" 
-                          (click)="rejectRequest(shift.shift_id)">
-                    Reject
-                  </button>
-                  <button class="btn primary" style="padding: 6px 12px; font-size: 0.85rem;" 
-                          (click)="approveRequest(shift.shift_id, shift.assigned_to_id)">
-                    Approve
-                  </button>
-                </div>
-              </div>
-            </li>
-          </ul>
+          <app-shift-list 
+            [shifts]="pendingApprovalShifts" 
+            [isLoading]="isLoadingPendingShifts"
+            loadingMessage="Loading requests..."
+            emptyMessage="No pending approvals at this time."
+            [showWorkerName]="true"
+            [showActions]="true"
+            (onReject)="rejectRequest($event)"
+            (onApprove)="approveRequest($event.shift_id, $event.assigned_to_id)">
+          </app-shift-list>
         </div>
       </div>
     </div>
@@ -323,10 +286,12 @@
           </div>
         </div>
 
-        <div class="filters">
-          <span class="filter-label">Filters:</span>
-          <button class="chip">Role</button>
-          <button class="chip">Employee</button>
+        <div class="filters" style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+          <mat-icon style="color: #64748b; font-size: 20px; width: 20px; height: 20px;">search</mat-icon>
+          <input type="text" 
+                 placeholder="Search by worker name..." 
+                 [(ngModel)]="searchTerm"
+                 style="flex: 1; max-width: 300px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 0.9rem;">
         </div>
 
         <div class="schedule-grid" *ngIf="scheduleView === 'today'">
@@ -338,8 +303,12 @@
             No shifts are currently assigned.
           </div>
 
-          <ul class="list compact" *ngIf="!isLoadingSchedule && assignedShifts.length > 0">
-            <li *ngFor="let shift of assignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div *ngIf="!isLoadingSchedule && assignedShifts.length > 0 && filteredAssignedShifts.length === 0" style="padding: 20px; color: #b91c1c;">
+            No workers found matching "{{ searchTerm }}".
+          </div>
+
+          <ul class="list compact" *ngIf="!isLoadingSchedule && filteredAssignedShifts.length > 0">
+            <li *ngFor="let shift of filteredAssignedShifts" style="margin-bottom: 12px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
               <div>
                 <div class="request-title" style="font-weight: 600; font-size: 1.1rem;">
                   {{ shift.start_time | date:'MMM d, y' }}
@@ -348,13 +317,36 @@
                   {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
                 </div>
                 <div class="chip active" style="margin-top: 8px; display: inline-block;">
-                  Assigned to Worker: {{ shift.assigned_to }}
+                  Assigned to Worker: {{ shift.assigned_to || 'Unassigned' }}
                 </div>
               </div>
             </li>
           </ul>
         </div>
-        <div class="week-grid" *ngIf="scheduleView === 'week'">
+        <div class="week-grid" *ngIf="scheduleView === 'week'" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-top: 16px; overflow-x: auto;">
+          
+          <div *ngFor="let day of weekSchedule" class="day-column" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; min-width: 140px;">
+            
+            <div class="day-header" style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
+              <div style="font-weight: 600; font-size: 0.85rem; color: #64748b; text-transform: uppercase;">{{ day.date | date:'EEE' }}</div>
+              <div style="font-size: 1.4rem; color: #0f172a; font-weight: 800;">{{ day.date | date:'d' }}</div>
+            </div>
+            
+            <div *ngIf="day.shifts.length === 0" style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 16px 0; font-style: italic;">
+              No shifts
+            </div>
+
+            <div *ngFor="let shift of day.shifts" style="background: white; border: 1px solid #cbd5e1; border-left: 3px solid #3b82f6; border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 0.8rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+                {{ shift.start_time | date:'h:mm a' }} - {{ shift.end_time | date:'h:mm a' }}
+              </div>
+              <div style="color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px;">
+                <mat-icon style="font-size: 14px; width: 14px; height: 14px;">person</mat-icon>
+                {{ shift.assigned_to }}
+              </div>
+            </div>
+
+          </div>
         </div>
       </article>
 
