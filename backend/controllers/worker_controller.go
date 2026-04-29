@@ -250,7 +250,12 @@ func CreateAvailability(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Creating availability for worker %d: day=%d, start=%s, end=%s", empID64, req.DayOfWeek, req.StartTime, req.EndTime)
+	if req.DayOfWeek == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "day_of_week is required"})
+		return
+	}
+
+	log.Printf("Creating availability for worker %d: day=%d, start=%s, end=%s", empID64, *req.DayOfWeek, req.StartTime, req.EndTime)
 
 	availability, err := services.CreateWorkerAvailability(uint(empID64), *req.DayOfWeek, req.StartTime, req.EndTime)
 	if err != nil {

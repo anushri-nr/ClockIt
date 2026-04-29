@@ -238,11 +238,21 @@ func DeleteShift(c *gin.Context) {
 	// Call the service
 	if err := services.DeleteShift(uint(shiftID64), supervisorID); err != nil {
 		log.Printf("Failed to delete shift: %v", err)
-		if err.Error() == "unauthorized to delete shifts outside your company" {
+		
+		// 1. Not Found (404)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
+			return
+		}
+		
+		// 2. Forbidden / Business Rule Violation (403)
+		if err.Error() == "unauthorized to delete shifts outside your company" || err.Error() == "cannot delete a shift that has active assignments" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete shift"})
+		
+		// 3. Catch-all Server Error (500)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process request"})
 		return
 	}
 
@@ -268,15 +278,21 @@ func UnassignWorker(c *gin.Context) {
 
 	if err := services.UnassignWorkerFromShift(uint(shiftID64), supervisorID); err != nil {
 		log.Printf("Failed to unassign worker: %v", err)
+		
+		// 1. Not Found (404)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
- 			c.JSON(http.StatusNotFound, gin.H{"error": "shift not found"})
- 			return
- 		}
- 		if err.Error() == "unauthorized to unassign shifts outside your company" {
- 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
- 			return
- 		}
- 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unassign worker"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "shift not found"})
+			return
+		}
+		
+		// 2. Forbidden / Business Rule Violation (403)
+		if err.Error() == "unauthorized to unassign shifts outside your company" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		
+		// 3. Catch-all Server Error (500)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to unassign worker"})
 		return
 	}
 

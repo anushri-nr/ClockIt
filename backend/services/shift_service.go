@@ -251,27 +251,20 @@ func DeleteShift(shiftID uint, supervisorID uint) error {
 		// 1. Verify supervisor exists
 		var sup models.Employee
 		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
-			return errors.New("supervisor not found")
+			return err // Bubbles up gorm.ErrRecordNotFound
 		}
 
-		// 2. Verify shift exists and belongs to the supervisor's company
+		// 2. Verify shift exists
 		var shift models.Shift
-		if err := tx.Preload("Creator").First(&shift, shiftID).Error; err != nil {
-			return errors.New("shift not found")
-		}
-		
-		if shift.Creator.CompanyID != sup.CompanyID {
-			return errors.New("unauthorized to delete shifts outside your company")
+		if err := tx.Preload("Assignments").First(&shift, shiftID).Error; err != nil {
+			return err // Bubbles up gorm.ErrRecordNotFound
 		}
 
-		// 3. Delete related shift assignments first (prevents foreign key constraint errors)
-		if err := tx.Where("shift_id = ?", shiftID).Delete(&models.ShiftAssignment{}).Error; err != nil {
-			return err
-		}
-
-		// 4. Delete the shift itself
-		if err := tx.Delete(&models.Shift{}, shiftID).Error; err != nil {
-			return err
+		// Guard to prevent deleting assigned shifts
+		for _, a := range shift.Assignments {
+			if a.Status == models.StatusAssigned || a.Status == models.StatusRequested {
+				return errors.New("cannot delete a shift that has active assignments")
+			}
 		}
 
 		return nil
@@ -289,8 +282,8 @@ func UnassignWorkerFromShift(shiftID, supervisorID uint) error {
 
 		// 2. Verify shift exists and belongs to the supervisor's company
 		var shift models.Shift
-		if err := tx.Preload("Creator").First(&shift, shiftID).Error; err != nil {
-			return errors.New("shift not found")
+		if err := tx.First(&shift, shiftID).Error; err != nil {
+			return err 
 		}
 		if shift.Creator.CompanyID != sup.CompanyID {
 			return errors.New("unauthorized to unassign shifts outside your company")
