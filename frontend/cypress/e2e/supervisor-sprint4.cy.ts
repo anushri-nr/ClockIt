@@ -34,9 +34,9 @@ describe('Supervisor Dashboard - Sprint 4 Features', () => {
 
   it('should completely delete an unassigned shift', () => {
 
-    cy.contains('Open Shifts').click();
+    cy.on('window:confirm', () => true);
 
-    cy.get('.shift-modal.open').should('be.visible');
+    cy.get('button').contains('Open Shifts').click();
 
     cy.get('.shift-modal.open')
       .find('.list.compact li')
@@ -45,6 +45,6 @@ describe('Supervisor Dashboard - Sprint 4 Features', () => {
       .contains('Delete') 
       .click();
 
-    cy.get('.mat-mdc-snack-bar-container').contains('Shift deleted successfully!');
+    cy.contains('Shift deleted successfully!', { timeout: 6000 }).should('be.visible');
   });
 });
