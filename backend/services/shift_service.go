@@ -256,8 +256,8 @@ func DeleteShift(shiftID uint, supervisorID uint) error {
 
 		// 2. Verify shift exists
 		var shift models.Shift
-		if err := tx.Preload("Assignments").First(&shift, shiftID).Error; err != nil {
-			return err // Bubbles up gorm.ErrRecordNotFound
+		if err := tx.Preload("Creator").Preload("Assignments").First(&shift, shiftID).Error; err != nil {
+			return err 
 		}
 
 		// Guard to prevent deleting assigned shifts
@@ -282,7 +282,7 @@ func UnassignWorkerFromShift(shiftID, supervisorID uint) error {
 
 		// 2. Verify shift exists and belongs to the supervisor's company
 		var shift models.Shift
-		if err := tx.First(&shift, shiftID).Error; err != nil {
+		if err := tx.Preload("Creator").Preload("Assignments").First(&shift, shiftID).Error; err != nil {
 			return err 
 		}
 		if shift.Creator.CompanyID != sup.CompanyID {
