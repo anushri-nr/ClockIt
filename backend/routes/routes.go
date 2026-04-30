@@ -8,6 +8,7 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine) {
+	r.GET("/health", func(c *gin.Context) { c.Status(200) })
 
 	supervisorRoutes := r.Group("/api/supervisors")
 	{
@@ -38,6 +39,11 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.SupervisorAuthorizationMiddleware(),
 			controllers.GetAssignedShifts,
+		)
+		supervisorRoutes.GET("/company/workers",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.GetCompanyWorkers,
 		)
 	}
 
@@ -89,6 +95,16 @@ func RegisterRoutes(r *gin.Engine) {
 			services.JWTAuthMiddleware(),
 			services.WorkerAuthorizationMiddleware(),
 			controllers.RequestShift,
+		)
+		shiftRoutes.DELETE("/:shift_id",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.DeleteShift,
+		)
+		shiftRoutes.PATCH("/:shift_id/unassign",
+			services.JWTAuthMiddleware(),
+			services.SupervisorAuthorizationMiddleware(),
+			controllers.UnassignWorker,
 		)
 	}
 

@@ -244,3 +244,60 @@ func RequestReleasedShift(workerID, shiftID uint) (*models.ShiftAssignment, erro
 	}
 	return &assignment, nil
 }
+
+// DeleteShift completely removes a shift and any associated assignments
+func DeleteShift(shiftID uint, supervisorID uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Verify supervisor exists
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+			return err // Bubbles up gorm.ErrRecordNotFound
+		}
+
+		// 2. Verify shift exists
+		var shift models.Shift
+		if err := tx.Preload("Assignments").First(&shift, shiftID).Error; err != nil {
+			return err // Bubbles up gorm.ErrRecordNotFound
+		}
+
+		// Guard to prevent deleting assigned shifts
+		for _, a := range shift.Assignments {
+			if a.Status == models.StatusAssigned || a.Status == models.StatusRequested {
+				return errors.New("cannot delete a shift that has active assignments")
+			}
+		}
+
+		return nil
+	})
+}
+
+// UnassignWorkerFromShift removes the assigned worker from a shift
+func UnassignWorkerFromShift(shiftID, supervisorID uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Verify supervisor
+		var sup models.Employee
+		if err := tx.Where("id = ? AND role = ?", supervisorID, models.RoleSupervisor).First(&sup).Error; err != nil {
+			return errors.New("supervisor not found")
+		}
+
+		// 2. Verify shift exists and belongs to the supervisor's company
+		var shift models.Shift
+		if err := tx.First(&shift, shiftID).Error; err != nil {
+			return err 
+		}
+		if shift.Creator.CompanyID != sup.CompanyID {
+			return errors.New("unauthorized to unassign shifts outside your company")
+		}
+
+		// 3. Delete the active assignment row so it returns to Unassigned
+		result := tx.Unscoped().Where("shift_id = ? AND status = ?", shiftID, models.StatusAssigned).Delete(&models.ShiftAssignment{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return errors.New("no active assignment found for this shift")
+		}
+
+		return nil
+	})
+}

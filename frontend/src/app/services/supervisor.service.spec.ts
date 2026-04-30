@@ -107,5 +107,49 @@ describe('SupervisorService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockWorkers);
   });
+
+  it('should send a DELETE request to completely remove a shift', () => {
+    const testShiftId = 42;
+
+    service.deleteShift(testShiftId).subscribe(response => {
+      expect(response).toBeTruthy();
+    });
+
+    // Matches the URL the service uses for deletion
+    const req = httpMock.expectOne(`http://localhost:8080/api/shifts/${testShiftId}`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ message: 'Deleted successfully' });
+  });
+
+  it('should send a PATCH request to unassign a worker from a shift', () => {
+    const testShiftId = 42;
+
+    service.unassignWorker(testShiftId).subscribe(response => {
+      expect(response).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`http://localhost:8080/api/shifts/${testShiftId}/unassign`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({});
+    req.flush({ message: 'Unassigned successfully' });
+  });
+
+  it('should fetch all workers for the supervisor company directory', () => {
+    const mockWorkers = [
+      { id: 1, name: 'Test Worker 1', email: 'w1@test.com' },
+      { id: 2, name: 'Test Worker 2', email: 'w2@test.com' }
+    ];
+
+    service.getCompanyWorkers().subscribe(workers => {
+      expect(workers.length).toBe(2);
+      expect(workers[0].name).toBe('Test Worker 1');
+    });
+
+    // Matches the supervisor company route
+    const req = httpMock.expectOne(`${apiUrl}/company/workers`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockWorkers);
+  });
+  
 });
 

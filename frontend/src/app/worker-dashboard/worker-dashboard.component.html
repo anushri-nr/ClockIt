@@ -1,7 +1,9 @@
 <div class="dashboard-wrapper">
   
   <mat-toolbar class="custom-toolbar">
-    <span class="brand">ClockIt</span>
+    <a class="brand" routerLink="/" style="text-decoration: none; color: inherit; cursor: pointer;">
+      ClockIt
+    </a>
     <span class="spacer"></span>
     <div class="user-profile">
       <span>Hello, {{ currentWorkerName }}</span>
@@ -18,6 +20,12 @@
 
   <div class="content-container">
     
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+      <button mat-flat-button style="background-color: #0f5f5c; color: white; border-radius: 8px; padding: 4px 16px; display: flex; align-items: center;" (click)="openAvailabilityModal()">
+        <mat-icon style="margin-right: 8px; font-size: 20px; width: 20px; height: 20px;">event_available</mat-icon> Set Availability
+      </button>
+    </div>
+     
     <div class="stats-grid">
       <mat-card class="stat-card highlight-card">
         <ng-container *ngIf="nextShift; else noShift">
@@ -139,6 +147,42 @@
     </div>
 
     <div class="grid-section">
+      <h2>Earnings Summary</h2>
+      <mat-card class="earnings-card">
+        <div class="earnings-header">
+          <div>
+            <div class="earnings-title">Estimated Total Earnings</div>
+            <div class="earnings-total">{{ estEarnings | currency }}</div>
+            <div class="earnings-sub">{{ totalHours | number:'1.1-1' }} hrs × ${{ hourlyWage }}/hr</div>
+          </div>
+        </div>
+        <div class="earnings-breakdown">
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">This Week</div>
+            <div class="earnings-period-amount">{{ weeklyEarnings | currency }}</div>
+          </div>
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">This Month</div>
+            <div class="earnings-period-amount">{{ monthlyEarnings | currency }}</div>
+          </div>
+          <div class="earnings-period-card">
+            <div class="earnings-period-label">All Time</div>
+            <div class="earnings-period-amount">{{ estEarnings | currency }}</div>
+          </div>
+        </div>
+        <div class="earnings-split">
+          <div class="earnings-split-row">
+            <div class="split-label">
+              <span class="split-dot upcoming-dot"></span>
+              Upcoming Assigned
+            </div>
+            <div class="split-value">{{ upcomingHours | number:'1.1-1' }} hrs &mdash; {{ upcomingHours * hourlyWage | currency }}</div>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+
+    <div class="grid-section">
       <h2>My Schedule</h2>
       <mat-card class="grid-container">
         
@@ -154,5 +198,42 @@
       </mat-card>
     </div>
 
+  </div>
+
+  <div class="availability-modal-overlay" *ngIf="isAvailabilityModalOpen">
+    <mat-card class="availability-modal-card">
+      <mat-card-header>
+        <mat-card-title>Weekly Availability</mat-card-title>
+        <mat-card-subtitle>When are you typically available to work?</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Day of the Week</label>
+            <select [(ngModel)]="availabilityForm.day_of_week">
+              <option *ngFor="let day of daysList" [value]="day.value">{{ day.label }}</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label>Start Time</label>
+            <input type="time" [(ngModel)]="availabilityForm.start_time">
+          </div>
+
+          <div class="form-field">
+            <label>End Time</label>
+            <input type="time" [(ngModel)]="availabilityForm.end_time">
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button (click)="closeAvailabilityModal()">Cancel</button>
+        <button mat-raised-button color="primary" [disabled]="isSubmittingAvailability" (click)="submitAvailability()">
+          {{ isSubmittingAvailability ? 'Saving...' : 'Save Availability' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
   </div>
 </div>

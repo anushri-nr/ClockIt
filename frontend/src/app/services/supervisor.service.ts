@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Shift {
   id: number;
@@ -22,12 +23,19 @@ export interface Worker {
   company_name: string;
 }
 
+export interface DirectoryWorker {
+  id: number;
+  name: string;
+  email: string;
+  phone_no: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class SupervisorService {
 
-  private apiUrl = 'http://localhost:8080/api/supervisors';
+  private apiUrl = environment.apiUrl + '/supervisors';
 
   constructor(private http: HttpClient) { }
 
@@ -65,7 +73,41 @@ export class SupervisorService {
     };
     // Note: The route is actually under 'shifts', not 'supervisors'
     // So we use a different base URL for this specific call
-    return this.http.post('http://localhost:8080/api/shifts/assign', payload);
+    return this.http.post(`${environment.apiUrl}/shifts/assign`, payload);
+  }
+
+  /// Fetch all assigned shifts for the schedule view
+  getAssignedShifts(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/assigned`);
+  }
+
+  // Fetch shifts that workers have requested
+  getRequestedShifts(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/shifts/requested`);
+  }
+
+  // Reject a requested shift
+  rejectShiftRequest(shiftId: number): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/shifts/${shiftId}/reject`, {});
+  }
+
+  // Fetch workers at risk of overtime
+  getOvertimeRiskWorkers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/workers/overtime`);
+  }
+
+  // Delete a shift
+  deleteShift(shiftId: number): Observable<any> {
+    return this.http.delete(`${environment.apiUrl}/shifts/${shiftId}`);
+  }
+
+  // Unassign a worker from a shift
+  unassignWorker(shiftId: number): Observable<any> {
+    return this.http.patch(`${environment.apiUrl}/shifts/${shiftId}/unassign`, {});
+  }
+
+  getCompanyWorkers(): Observable<DirectoryWorker[]> {
+    return this.http.get<DirectoryWorker[]>(`${this.apiUrl}/company/workers`);
   }
 
   /// Fetch all assigned shifts for the schedule view

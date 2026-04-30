@@ -8,11 +8,13 @@ import { ShiftService } from '../services/shift.service';
 import { SupervisorService } from '../services/supervisor.service';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { ShiftListComponent } from '../components/shift-list/shift-list.component';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, MatToolbarModule, MatIconModule, MatButtonModule, MatSnackBarModule, ShiftListComponent],
   templateUrl: './supervisor-dashboard.component.html',
   styleUrl: './supervisor-dashboard.component.scss'
 })
@@ -64,12 +66,19 @@ export class SupervisorDashboardComponent implements OnInit {
   isLoadingOpenShifts = false;
   isLoadingPendingShifts = false;
 
+  searchTerm: string = '';
+
+  isWorkerDirectoryOpen = false;
+  companyWorkers: any[] = [];
+  isLoadingWorkersList = false;
+
   constructor(
     private shiftService: ShiftService,
     private supervisorService: SupervisorService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnInit() {
@@ -90,6 +99,7 @@ export class SupervisorDashboardComponent implements OnInit {
       this.loadShifts();
       this.loadAssignedSchedule();
       this.loadOvertimeRisk();
+      this.loadPendingApprovals();
     } else {
       console.error('CRITICAL: No valid user state found. Cannot load shifts.');
     }
@@ -243,6 +253,19 @@ export class SupervisorDashboardComponent implements OnInit {
     });
   }
 
+  loadPendingApprovals() {
+    this.supervisorService.getRequestedShifts().subscribe({
+      next: (data) => {
+        this.pendingApprovalShifts = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load pending approval shifts', err);
+        this.pendingApprovalShifts = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
   // --- LOGIC ---
 
   get totalHours(): string {
@@ -263,7 +286,7 @@ export class SupervisorDashboardComponent implements OnInit {
     this.createShift.createdBy = this.currentSupervisorId.toString();
 
     if (!this.createShift.startTime || !this.createShift.endTime) {
-      alert('Please fill start time and end times.');
+      this.showToast('Please fill start time and end times.', true);
       return;
     }
 
@@ -305,7 +328,7 @@ export class SupervisorDashboardComponent implements OnInit {
     this.assignShiftError = '';
 
     if (!this.selectedShiftId || !this.selectedWorkerId) {
-      alert('Please select a shift and a worker.');
+      this.showToast('Please select a shift and a worker.');
       return;
     }
 
@@ -318,10 +341,13 @@ export class SupervisorDashboardComponent implements OnInit {
         console.log("Worker assigned successfully");
 
         this.closeAssignWorkerModal();
-        this.cdr.detectChanges();
-
+        
         // Refresh the grid to show the new assignment
         this.loadShifts();
+        this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
+
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Assignment failed', err);
@@ -349,10 +375,11 @@ export class SupervisorDashboardComponent implements OnInit {
 
     // 2. Find the full shift object to get its date
     // We cast to 'any' to avoid type errors with snake_case
-    const shift: any = this.shifts.find((s: any) => s.id == this.selectedShiftId);
+    const shift: any = this.openShifts.find((s: any) => (s.id == this.selectedShiftId || s.shift_id == this.selectedShiftId));
 
     if (shift) {
       this.isLoadingWorkers = true;
+      this.cdr.detectChanges();
 
       // 3. Extract the date (YYYY-MM-DD) from the shift's start time
       // Example: "2026-02-18T09:00:00Z" -> "2026-02-18"
@@ -364,10 +391,14 @@ export class SupervisorDashboardComponent implements OnInit {
           this.availableWorkers = data;
           this.isLoadingWorkers = false;
           console.log(`Loaded ${data.length} workers for date: ${dateStr}`);
+
+          this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Failed to load workers for selected shift', err);
           this.isLoadingWorkers = false;
+
+          this.cdr.detectChanges();
         }
       });
     }
@@ -402,6 +433,14 @@ export class SupervisorDashboardComponent implements OnInit {
     this.selectedShiftId = '';
     this.selectedWorkerId = '';
     this.availableWorkers = [];
+
+    this.supervisorService.getShifts(this.currentSupervisorId, 'Unassigned').subscribe({
+      next: (data) => {
+        this.openShifts = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to load unassigned shifts', err)
+    });
   }
 
   closeAssignWorkerModal() {
@@ -455,10 +494,34 @@ export class SupervisorDashboardComponent implements OnInit {
     });
   }
 
+  openWorkerDirectory() {
+    this.resetModals();
+    this.isWorkerDirectoryOpen = true;
+    this.isLoadingWorkersList = true;
+
+    this.supervisorService.getCompanyWorkers().subscribe({
+      next: (data) => {
+        this.companyWorkers = data || [];
+        this.isLoadingWorkersList = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load directory', err);
+        this.showToast('Could not load worker directory.', true);
+        this.isLoadingWorkersList = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeWorkerDirectory() {
+    this.isWorkerDirectoryOpen = false;
+  }
+
   // ISSUE #73 & #77: Approve Action
   approveRequest(shiftId: number, workerId: number) {
     if (!workerId) {
-      alert("Worker ID missing from request.");
+      this.showToast("Worker ID missing from request.");
       return;
     }
     
@@ -467,10 +530,13 @@ export class SupervisorDashboardComponent implements OnInit {
         console.log('Shift approved & assigned');
         this.openStatusSnapshot(); // Refresh the modal list
         this.loadAssignedSchedule(); // Refresh the main dashboard view
+        this.loadOvertimeRisk();     // Refresh overtime alerts instantly
+
+        if (this.isStatusSnapshotOpen) this.openStatusSnapshot(); // Refresh modal if open
       },
       error: (err) => {
         console.error('Approve failed', err);
-        alert('Failed to approve shift.');
+        this.showToast('Failed to approve shift.');
       }
     });
   }
@@ -480,11 +546,13 @@ export class SupervisorDashboardComponent implements OnInit {
     this.supervisorService.rejectShiftRequest(shiftId).subscribe({
       next: () => {
         console.log('Shift request rejected');
-        this.openStatusSnapshot(); // Refresh the modal list
+        this.loadPendingApprovals(); // Refresh side panel
+        if (this.isStatusSnapshotOpen) this.openStatusSnapshot(); // Refresh modal if open
+
       },
       error: (err) => {
         console.error('Reject failed', err);
-        alert('Failed to reject shift.');
+        this.showToast('Failed to reject shift.');
       }
     });
   }
@@ -492,6 +560,106 @@ export class SupervisorDashboardComponent implements OnInit {
 
   setScheduleView(view: 'today' | 'week') {
     this.scheduleView = view;
+  }
+
+  get filteredAssignedShifts() {
+    if (!this.searchTerm) {
+      return this.assignedShifts;
+    }
+    const lowerTerm = this.searchTerm.toLowerCase();
+    
+    return (this.assignedShifts || []).filter(shift => {
+      // Check if the worker's name includes the search term
+      const workerName = (shift.assigned_to || 'Unassigned').toLowerCase();
+      return workerName.includes(lowerTerm);
+    });
+  }
+
+  // Calculates how many workers are scheduled for today
+  get todaysCoverageCount(): number {
+    const today = new Date().toDateString();
+    return (this.assignedShifts || []).filter(shift => {
+      if (!shift.start_time) return false;
+      return new Date(shift.start_time).toDateString() === today;
+    }).length;
+  }
+
+  get weekSchedule() {
+    const days = [];
+    const today = new Date();
+    
+    // Generate an array for Today + the next 6 days
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date();
+      currentDate.setDate(today.getDate() + i);
+      
+      // Find all shifts that match this specific date
+      const dayShifts = (this.assignedShifts || []).filter(shift => {
+        if (!shift.start_time) return false;
+        const shiftDate = new Date(shift.start_time);
+        return shiftDate.toDateString() === currentDate.toDateString();
+      });
+
+      // Sort shifts by start time so morning shifts appear at the top
+      dayShifts.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+      days.push({
+        date: currentDate,
+        shifts: dayShifts
+      });
+    }
+    return days;
+  }
+
+  showToast(message: string, isError: boolean = false) {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000, // Disappears after 3 seconds
+      horizontalPosition: 'right',
+      verticalPosition: 'bottom',
+      panelClass: isError ? ['toast-error'] : ['toast-success']
+    });
+  }
+
+  deleteShift(shiftId: number) {
+    if (!confirm('Are you sure you want to completely delete this shift?')) return;
+
+    this.supervisorService.deleteShift(shiftId).subscribe({
+      next: () => {
+        this.showToast('Shift deleted successfully!', false);
+        // Refresh the open shifts modal so it disappears instantly
+        this.openOpenShiftsModal(); 
+        // Also refresh the main grid just in case
+        this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
+        // Refresh the raw shifts list so the Assign Worker modal updates!
+        this.loadShifts();
+      },
+      error: (err) => {
+        console.error('Failed to delete shift', err);
+        this.showToast('Failed to delete shift.', true);
+      }
+    });
+  }
+  
+  unassignShift(shiftId: number) {
+    if (!confirm('Are you sure you want to remove this worker from the shift?')) return;
+
+    this.supervisorService.unassignWorker(shiftId).subscribe({
+      next: () => {
+        this.showToast('Worker unassigned successfully!', false);
+        
+        // Refresh the schedule grid
+        this.loadAssignedSchedule();
+        this.loadOvertimeRisk();
+        
+        // Refresh the shifts list so the Unassigned modal gets updated
+        this.loadShifts(); 
+      },
+      error: (err) => {
+        console.error('Failed to unassign worker', err);
+        this.showToast(err.error?.error || 'Failed to unassign worker.', true);
+      }
+    });
   }
 
   private updateDateTime() {

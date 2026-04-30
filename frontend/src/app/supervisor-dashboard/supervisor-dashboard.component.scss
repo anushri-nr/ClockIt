@@ -985,3 +985,36 @@
     font-size: 24px;
   }
 }
+
+/* Toast Notification Styles */
+::ng-deep .toast-success .mdc-snackbar__surface {
+  background-color: #16a34a !important; /* Vibrant Green */
+  color: white !important;
+  font-weight: 500;
+}
+
+::ng-deep .toast-error .mdc-snackbar__surface {
+  background-color: #dc2626 !important; /* Vibrant Red */
+  color: white !important;
+  font-weight: 500;
+}
+
+::ng-deep .toast-success .mdc-button__label, 
+::ng-deep .toast-error .mdc-button__label {
+  color: white !important; /* Make the 'Close' button white */
+}
+button, 
+.btn, 
+.btn.small, 
+.btn.ghost, 
+.toggle-btn, 
+.request-actions button {
+  cursor: pointer !important;
+}
+
+.request-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, BehaviorSubject } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 // 1. Define exactly what a user looks like
 export interface User {
@@ -17,7 +18,7 @@ export interface User {
 })
 export class AuthService {
 
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = `${environment.apiUrl}`;
 
   // 2. The Single Source of Truth for the logged-in user
   private currentUserSubject = new BehaviorSubject<User | null>(null);

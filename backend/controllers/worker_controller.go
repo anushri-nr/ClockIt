@@ -225,7 +225,7 @@ func GetShiftsForWorker(c *gin.Context) {
 // CreateAvailability allows a worker to set their availability for a specific day of the week
 func CreateAvailability(c *gin.Context) {
 	type Req struct {
-		DayOfWeek int    `json:"day_of_week" binding:"required,min=0,max=6"`
+		DayOfWeek *int    `json:"day_of_week" binding:"required,min=0,max=6"`
 		StartTime string `json:"start_time" binding:"required"`
 		EndTime   string `json:"end_time" binding:"required"`
 	}
@@ -250,9 +250,14 @@ func CreateAvailability(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Creating availability for worker %d: day=%d, start=%s, end=%s", empID64, req.DayOfWeek, req.StartTime, req.EndTime)
+	if req.DayOfWeek == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "day_of_week is required"})
+		return
+	}
 
-	availability, err := services.CreateWorkerAvailability(uint(empID64), req.DayOfWeek, req.StartTime, req.EndTime)
+	log.Printf("Creating availability for worker %d: day=%d, start=%s, end=%s", empID64, *req.DayOfWeek, req.StartTime, req.EndTime)
+
+	availability, err := services.CreateWorkerAvailability(uint(empID64), *req.DayOfWeek, req.StartTime, req.EndTime)
 	if err != nil {
 		log.Printf("CreateAvailability: service error: %v", err)
 
