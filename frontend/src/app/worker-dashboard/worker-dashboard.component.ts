@@ -11,7 +11,11 @@ import { MatChipsModule } from '@angular/material/chips';
 import { WorkerService, WorkerShift } from '../services/worker.service';
 import { Observable, of, tap, map } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms'; // Add this
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar'; // Add this
+import { AvailabilityPayload } from '../services/worker.service';
+import { ChangeDetectorRef } from '@angular/core';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -28,6 +32,9 @@ interface Shift {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    MatSnackBarModule,
+    RouterLink,
     AgGridAngular,
     MatToolbarModule,
     MatButtonModule,
@@ -40,7 +47,6 @@ interface Shift {
 })
 export class WorkerDashboardComponent implements OnInit {
 
-  // Dynamic User Data (Replaced Hardcoded Values)
   currentWorkerId: number = 0;
   currentCompanyId: number = 0;
   currentWorkerName: string = '';
@@ -54,6 +60,9 @@ export class WorkerDashboardComponent implements OnInit {
 
   totalHours = 0;
   estEarnings = 0;
+  weeklyEarnings = 0;
+  monthlyEarnings = 0;
+  upcomingHours = 0;
   hourlyWage = 15;
   weeklyTarget = 40;
   dailyTarget = 8;
@@ -64,35 +73,51 @@ export class WorkerDashboardComponent implements OnInit {
   weekOffset = 0;
   profileMenuOpen = false;
 
+  isAvailabilityModalOpen = false;
+  availabilityForm: AvailabilityPayload = {
+    day_of_week: 1, // Default to Monday
+    start_time: '09:00',
+    end_time: '17:00'
+  };
+  isSubmittingAvailability = false;
+
+  daysList = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
+
   constructor(
     private workerService: WorkerService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) { }
 
   colDefs: ColDef[] = [
-    // 1. Extract the Date from the start_time ISO string
     {
       headerName: 'Date',
       valueGetter: params => params.data.start_time,
       valueFormatter: params => new Date(params.value).toLocaleDateString(),
       flex: 1
     },
-    // 2. Map to snake_case 'start_time'
     {
       field: 'start_time',
       headerName: 'Start',
       valueFormatter: params => new Date(params.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       flex: 1
     },
-    // 3. Map to snake_case 'end_time'
     {
       field: 'end_time',
       headerName: 'End',
       valueFormatter: params => new Date(params.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       flex: 1
     },
-    // 4. Duration of the shift
     {
       headerName: 'Duration',
       valueGetter: (params) => {
@@ -103,7 +128,6 @@ export class WorkerDashboardComponent implements OnInit {
       },
       flex: 1
     },
-    // 5. Update status check for lowercase 'assigned'
     {
       field: 'status',
       flex: 1,
@@ -112,7 +136,6 @@ export class WorkerDashboardComponent implements OnInit {
         return value.charAt(0).toUpperCase() + value.slice(1);
       },
       cellStyle: (params) => {
-        // Go backend returns lowercase "assigned"
         const status = params.value?.toLowerCase();
         const isAssigned = status === 'assigned';
         const isReleased = status === 'released';
@@ -122,8 +145,6 @@ export class WorkerDashboardComponent implements OnInit {
         };
       }
     },
-    // 6. Wage is not currently in the Shift API response, 
-    // so we can use your hardcoded dashboard value for now.
     {
       headerName: 'Wage ($/hr)',
       valueGetter: () => this.hourlyWage,
@@ -134,10 +155,8 @@ export class WorkerDashboardComponent implements OnInit {
   ngOnInit() {
     this.updateDateTime();
 
-    // 1. Ask the single source of truth for the user
     const user = this.authService.currentUserValue;
 
-    // 2. Safely assign variables and fetch data
     if (user && user.id) {
       this.currentWorkerId = user.id;
       this.currentWorkerName = user.name || 'Worker';
@@ -145,7 +164,6 @@ export class WorkerDashboardComponent implements OnInit {
 
       console.log(`Worker Dashboard initialized for User ID: ${this.currentWorkerId}`);
 
-      // 3. Load shifts using the REAL dynamic ID
       this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
         map((data) => {
           const safeData = data || [];
@@ -174,19 +192,90 @@ export class WorkerDashboardComponent implements OnInit {
     }
   }
 
+  openAvailabilityModal() {
+    this.isAvailabilityModalOpen = true;
+  }
+
+  closeAvailabilityModal() {
+    this.isAvailabilityModalOpen = false;
+    this.availabilityForm = {
+      day_of_week: 1, // Default back to Monday
+      start_time: '09:00',
+      end_time: '17:00'
+    };
+  }
+
+  submitAvailability() {
+    if (this.isSubmittingAvailability) return;
+    
+    this.isSubmittingAvailability = true;
+    
+    this.cdr.detectChanges();
+
+    // 100% force the day into an integer (HTML dropdowns output strings by default)
+    const payload: AvailabilityPayload = {
+      day_of_week: parseInt(this.availabilityForm.day_of_week as any, 10),
+      start_time: this.availabilityForm.start_time,
+      end_time: this.availabilityForm.end_time
+    };
+
+    this.workerService.createAvailability(this.currentWorkerId, payload).subscribe({
+      next: () => {
+        this.snackBar.open('Availability saved successfully!', 'Close', { duration: 3000 });
+        
+          this.isSubmittingAvailability = false;
+          this.closeAvailabilityModal();
+
+          this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to update availability', err);
+        this.snackBar.open('Failed to save availability.', 'Close', { duration: 3000 });
+        
+          this.isSubmittingAvailability = false;
+
+          this.cdr.detectChanges();
+      }
+    });
+  }
+
   calculateStats(shifts: WorkerShift[]) {
     this.totalHours = 0;
+    this.upcomingHours = 0;
+    this.weeklyEarnings = 0;
+    this.monthlyEarnings = 0;
+
+    const now = new Date();
+    const startOfWeek = this.getStartOfWeek(now);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
     shifts.forEach(shift => {
-      // Safety check for missing times
       if (!shift.start_time || !shift.end_time) return;
+
+      const status = shift.status?.toLowerCase();
+      if (status === 'released') return;
 
       const start = new Date(shift.start_time).getTime();
       const end = new Date(shift.end_time).getTime();
       const durationHours = (end - start) / (1000 * 60 * 60);
+      if (durationHours <= 0) return;
 
-      if (durationHours > 0) {
-        this.totalHours += durationHours;
+      this.totalHours += durationHours;
+
+      if (status === 'assigned') {
+        this.upcomingHours += durationHours;
+      }
+
+      const shiftStart = new Date(shift.start_time);
+      if (shiftStart >= startOfWeek && shiftStart <= endOfWeek) {
+        this.weeklyEarnings += durationHours * this.hourlyWage;
+      }
+      if (shiftStart >= startOfMonth && shiftStart <= endOfMonth) {
+        this.monthlyEarnings += durationHours * this.hourlyWage;
       }
     });
 
@@ -196,12 +285,10 @@ export class WorkerDashboardComponent implements OnInit {
   findNextShift(shifts: WorkerShift[]) {
     const now = new Date().getTime();
 
-    // safety check
     if (!shifts) return;
 
     const assignedShifts = this.getAssignedShifts(shifts);
 
-    // Filter for future assigned shifts and sort by start time
     const futureShifts = assignedShifts
       .filter(s => new Date(s.start_time).getTime() > now)
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
@@ -238,23 +325,30 @@ export class WorkerDashboardComponent implements OnInit {
   releaseShift(shift: WorkerShift) {
     if (!shift) return;
 
-    const releasedIds = this.getReleasedShiftIds();
-    if (!releasedIds.includes(shift.id)) {
-      releasedIds.push(shift.id);
-      localStorage.setItem('released_shift_ids', JSON.stringify(releasedIds));
-    }
+    if (!confirm('Are you sure you want to release this shift?')) return;
 
-    this.allShifts = this.allShifts.map(item => {
-      if (item.id === shift.id) {
-        return { ...item, status: 'released' };
+    // Send the actual shift_id to the Go backend
+    this.workerService.releaseShift(shift.shift_id).subscribe({
+      next: () => {
+        this.snackBar.open('Shift released successfully!', 'Close', { duration: 3000 });
+        
+        // Reload all shifts from the database to get the true state
+        this.myShifts$ = this.workerService.getMyShifts(this.currentWorkerId).pipe(
+          tap((data) => {
+            const safeData = data || [];
+            this.allShifts = safeData;
+            this.calculateStats(safeData);
+            this.findNextShift(safeData);
+            this.assignedShifts = this.getAssignedShifts(safeData);
+            this.calculateWeeklyAssigned(safeData, this.getBaseWeekDate());
+          })
+        );
+      },
+      error: (err) => {
+        console.error('Failed to release shift', err);
+        this.snackBar.open(err.error?.error || 'Failed to release shift', 'Close', { duration: 3000 });
       }
-      return item;
     });
-
-    this.assignedShifts = this.getAssignedShifts(this.allShifts);
-    this.findNextShift(this.allShifts);
-    this.calculateWeeklyAssigned(this.allShifts, this.getBaseWeekDate());
-    this.myShifts$ = of(this.allShifts);
   }
 
   private getReleasedShiftIds(): number[] {

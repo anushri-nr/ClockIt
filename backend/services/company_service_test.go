@@ -16,6 +16,15 @@ func TestCreateCompanyService_Success(t *testing.T) {
 	require.Equal(t, "TestCo", c.Name)
 }
 
+func TestCreateCompanyService_PersistsAddress(t *testing.T) {
+	setupServiceTestDB(t)
+
+	c, err := CreateCompany("AddressCo", "123 Main St")
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	require.Equal(t, "123 Main St", c.Address)
+}
+
 func TestCreateCompanyService_InvalidName(t *testing.T) {
 	setupServiceTestDB(t)
 
@@ -38,4 +47,12 @@ func TestListCompaniesService_Success(t *testing.T) {
 	names := []string{list[0].Name, list[1].Name}
 	require.Contains(t, names, "C1")
 	require.Contains(t, names, "C2")
+}
+
+func TestListCompaniesService_Empty(t *testing.T) {
+	setupServiceTestDB(t)
+
+	list, err := ListCompanies()
+	require.NoError(t, err)
+	require.Len(t, list, 0)
 }

@@ -78,3 +78,23 @@ func TestListCompanies_Success(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d, body=%s", w.Code, w.Body.String())
 	}
 }
+
+func TestListCompanies_DBFailure(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	_ = setupTestDB(t)
+
+	if err := database.DB.Migrator().DropTable(&models.Company{}); err != nil {
+		t.Fatalf("failed to drop companies table: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/companies/list", nil)
+	w := httptest.NewRecorder()
+
+	r := gin.New()
+	r.GET("/api/companies/list", ListCompanies)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 Internal Server Error, got %d, body=%s", w.Code, w.Body.String())
+	}
+}

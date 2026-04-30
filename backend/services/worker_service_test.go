@@ -7,6 +7,7 @@ import (
 
 	"clockit/backend/database"
 	"clockit/backend/models"
+	"clockit/backend/repository"
 
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -86,13 +87,41 @@ func TestCreateWorkerAvailability(t *testing.T) {
 func TestGetAssignedShifts_Success(t *testing.T) {
 	setupWorkerServiceDB(t)
 
-	worker := models.Employee{
-		ID:    3,
-		Email: "worker2@test.local",
-		Role:  models.RoleWorker,
-		Wage:  20,
+	company := models.Company{Name: "Assigned Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	supervisor := models.Employee{
+		Name: "Supervisor", Email: "supervisor.assigned@test.local", Role: models.RoleSupervisor, CompanyID: company.ID, Wage: 40,
 	}
+	worker := models.Employee{
+		Name: "Worker", Email: "worker2@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 20,
+	}
+	require.NoError(t, database.DB.Create(&supervisor).Error)
 	require.NoError(t, database.DB.Create(&worker).Error)
+
+	start := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	shift := models.Shift{StartTime: start, EndTime: start.Add(6 * time.Hour), CreatedBy: supervisor.ID}
+	require.NoError(t, database.DB.Create(&shift).Error)
+
+	assignedAt := time.Now().UTC().Truncate(time.Second)
+	assignment := models.ShiftAssignment{
+		ShiftID: shift.ID, EmployeeID: worker.ID, AssigneeID: supervisor.ID, Status: models.StatusAssigned, AssignedAt: assignedAt,
+	}
+	require.NoError(t, database.DB.Create(&assignment).Error)
+
+	svc := &WorkerService{Repo: &repository.WorkerRepository{}}
+	got, err := svc.GetAssignedShifts(worker.ID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, assignment.ID, got[0].ID)
+	require.Equal(t, shift.ID, got[0].ShiftID)
+	require.Equal(t, supervisor.ID, got[0].AssignedBy)
+	require.Equal(t, string(models.StatusAssigned), got[0].Status)
+	require.Equal(t, 6.0, got[0].DurationHours)
+	require.Equal(t, 120.0, got[0].Earnings)
+	require.Equal(t, start.Format(time.RFC3339), got[0].StartTime)
+	require.Equal(t, start.Add(6*time.Hour).Format(time.RFC3339), got[0].EndTime)
+	require.Equal(t, assignedAt.Format(time.RFC3339), got[0].AssignedAt)
 }
 
 func TestGetAssignedShifts(t *testing.T) {
@@ -166,6 +195,41 @@ func TestGetReleasedShiftsByEmployeeCompany_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	require.Equal(t, shiftKeep.ID, got[0].ID)
+}
+
+func TestGetReleasedShiftsByEmployeeCompany_EmployeeNotWorker(t *testing.T) {
+	setupWorkerServiceDB(t)
+
+	company := models.Company{Name: "Released Wrong Role Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	supervisor := models.Employee{
+		Name: "SupWrongRole", Email: "sup.wrongrole.rel@test.local", Role: models.RoleSupervisor, CompanyID: company.ID, Wage: 40,
+	}
+	require.NoError(t, database.DB.Create(&supervisor).Error)
+
+	svc := WorkerService{}
+	got, err := svc.GetReleasedShiftsByEmployeeCompany(supervisor.ID)
+	require.Error(t, err)
+	require.Len(t, got, 0)
+	require.True(t, errors.Is(err, gorm.ErrRecordNotFound))
+}
+
+func TestGetReleasedShiftsByEmployeeCompany_Empty(t *testing.T) {
+	setupWorkerServiceDB(t)
+
+	company := models.Company{Name: "Released Empty Co"}
+	require.NoError(t, database.DB.Create(&company).Error)
+
+	worker := models.Employee{
+		Name: "WorkerEmpty", Email: "worker.empty.rel@test.local", Role: models.RoleWorker, CompanyID: company.ID, Wage: 20,
+	}
+	require.NoError(t, database.DB.Create(&worker).Error)
+
+	svc := WorkerService{}
+	got, err := svc.GetReleasedShiftsByEmployeeCompany(worker.ID)
+	require.NoError(t, err)
+	require.Len(t, got, 0)
 }
 
 func TestRequestReleasedShift_Success(t *testing.T) {
