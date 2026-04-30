@@ -1,7 +1,7 @@
 # Sprint 4 - ClockIt
 
 ## Overview
-Sprint 4 focused on improving test coverage, documenting the current backend APIs, hardening the shift workflow behavior added in earlier sprints, and deploying the full stack to AWS.
+Sprint 4 focused on improving test coverage, documenting the current backend APIs, hardening the shift workflow behavior added in earlier sprints, and deploying the full stack to AWS. We also completed the Supervisor Dashboard frontend, integrating real-time state management and completing the full end-to-end shift lifecycle.
 ---
 
 ## Work Completed in Sprint 4
@@ -20,9 +20,18 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
 - Added worker availability success coverage.
 - Added released-shift lookup not-found coverage.
 - Added service coverage for unassigned shift filtering, latest assignment selection, assignment update behavior, overtime threshold exclusion, and company list edge cases.
+- Added shift deletion endpoint wrapped in a database transaction to safely cascade and delete assignment rows.
+- Added a company-filtered worker directory endpoint (`GetCompanyWorkers`).
 
 ### Frontend
-
+- Fully implemented the main dashboard layout using Angular Material components.
+- Added a `Today's Coverage` metric that dynamically counts workers scheduled for the current day.
+- Added a toggle to switch the main schedule grid between a `Today` and `Week` view, alongside a real-time `Worker Search` filter.
+- Built a read-only directory modal to view company employee contact info (Name, Email, Phone).
+- Integrated modals for `Create Shift`, `Open Shifts` (with Delete functionality), and `Assign Worker`.
+- Engineered the `Assign Worker` dropdown to automatically parse the selected shift's date and fetch only available workers.
+- Refactored component architecture so that actions (Approve, Reject, Delete, Unassign) trigger instant data reloads for the Schedule Grid, Pending Approvals, and Overtime Alerts without requiring a page refresh.
+- Added consistent pointer cursors, Material icons, and Angular Material `SnackBar` (Toast) notifications for all success and error states.
 ---
 
 ## AWS Deployment
@@ -66,6 +75,9 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
   - `should fetch assigned shifts for the schedule view`
   - `should send a PATCH request to reject a requested shift`
   - `should fetch workers at risk of overtime`
+  - `should send a DELETE request to completely remove a shift`
+  - `should send a PATCH request to unassign a worker from a shift`
+  - `should fetch all workers for the supervisor company directory`
 
 ### Shift List Component
 - `shift-list.component.spec.ts`
@@ -75,9 +87,13 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
 
 ## Cypress E2E Tests
 
-### Supervisor Authentication
+### Supervisor Authentication & Dashboard Features
 - `supervisor-login.cy.ts`
   - `should successfully log in a supervisor and load the dashboard`
+- `supervisor-sprint4.cy.ts`
+  - `should open the Worker Directory and display company workers`
+  - `should unassign a worker from an active shift`
+  - `should completely delete an unassigned shift`
 
 ### Worker Authentication
 - `worker-login.cy.ts`
@@ -209,6 +225,8 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
 - `TestRejectShiftRequest_NotFound_WhenSupervisorMissing`
 - `TestRequestReleasedShift_WorkerWrongCompany`
 - `TestRequestReleasedShift_WorkerNotFound`
+- `TestShiftService_DeleteShift`
+- `TestShiftService_UnassignWorker`
 
 #### Supervisor Service
 - `TestSupervisorService_GetShiftsByCompany_NotFound`
@@ -220,6 +238,7 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
 - `TestSupervisorService_GetWorkersWithOvertimeHours_Success`
 - `TestSupervisorService_GetWorkersWithOvertimeHours_NotFound`
 - `TestSupervisorService_GetWorkersWithOvertimeHours_ExcludesWorkersAtOrBelowThreshold`
+- `TestSupervisorService_GetCompanyWorkers`
 
 #### Worker Service
 - `TestCreateWorkerAvailability`
@@ -318,6 +337,11 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
   - Success: `200 OK` with workers over 20 assigned hours for the current week.
   - Error: `401 Unauthorized`, `404 Not Found`, or `500 Internal Server Error`.
 
+- `GET /api/supervisors/company/workers`
+  - Auth: JWT + supervisor role.
+  - Success: `200 OK` with a list of workers (`id`, `name`, `email`, `phone_no`) belonging to the supervisor's company.
+  - Error: `404 Not Found` or `500 Internal Server Error`.
+
 ### Worker APIs
 - `POST /api/workers/register`
   - Auth: public.
@@ -412,6 +436,16 @@ Sprint 4 focused on improving test coverage, documenting the current backend API
     ```
   - Success: `200 OK`.
   - Error: `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, or `500 Internal Server Error`.
+
+- `DELETE /api/shifts/:shift_id`
+  - Auth: JWT + supervisor role.
+  - Success: `200 OK` shift and underlying assignments permanently deleted.
+  - Error: `403 Forbidden` (if shift has active assignments or wrong company), `404 Not Found`, or `500 Internal Server Error`.
+
+- `PATCH /api/shifts/:shift_id/unassign`
+  - Auth: JWT + supervisor role.
+  - Success: `200 OK` worker unassigned, shift status reset.
+  - Error: `403 Forbidden` (wrong company), `404 Not Found`, or `500 Internal Server Error`.
 
 ---
 
